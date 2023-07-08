@@ -1,0 +1,61 @@
+[DB접속정보]
+개발 : DIWIN428 / HDIHVAPPDEV01
+UAT : DIWIN388
+운영 : DIMESDB01
+
+중국UAT : VDICWIN35
+중국운영 : DICCGMESDB
+
+DB 접속정보
+ID : FlxAdmins
+PW: Mes032!
+
+AprisoDev
+FlexNet
+
+[OEM DB접속정보]
+개발서버 : DIWIN262
+계정/암호 : usroemb / !!13dhdldpa
+
+운영서버 : DIWIN44
+계정/암호 : erp_oem / oem_erp
+
+OEM 계정 : 0106464 / 123qwer@
+
+[URL]
+ - 개발(신) :
+	http://HDIHVAPPDEV01.HDCEGroup.hhi.co.kr/Apriso/Portal/Kiosk/Login.aspx?BackToStartPage=true&ReturnUrl=http%3a%2f%2fdiwin426.corp.doosan.com%2fapriso%2fapriso%2f%23%2fsearch
+	http://HDIHVAPPDEV01.HDCEGroup.hhi.co.kr/Apriso/Apriso/#/search	
+	http://HDIHVAPPDEV01.HDCEGroup.hhi.co.kr/apriso/start
+ - 개발(AD) :
+    http://hdihvappdev01.hdcegroup.hhi.co.kr/Apriso/WebAuthentication/Login.aspx
+
+ - 개발(구) :
+	http://diwin426.corp.doosan.com/Apriso/Portal/Kiosk/Login.aspx?BackToStartPage=true&ReturnUrl=http%3a%2f%2fdiwin426.corp.doosan.com%2fapriso%2fapriso%2f%23%2fsearch
+	http://diwin426/Apriso/Apriso/#/search	
+	http://diwin426.hdcegroup.hhi.co.kr/apriso/start
+ - 개발(AD) :
+	http://diwin426.corp.doosan.com/Apriso/WebAuthentication/Login.aspx
+
+ - UAT :
+	http://diwin388.corp.doosan.com/Apriso/Portal/Kiosk/Login.aspx?BackToStartPage=true&ReturnUrl=http%3a%2f%2fdiwin388.corp.doosan.com%2fapriso%2fapriso%2f%23%2fsearch
+	http://diwin388/Apriso/Apriso/#/search
+	http://diwin388.hdcegroup.hhi.co.kr/apriso/start
+ - UAT(AD) :
+	http://diwin388.corp.doosan.com/Apriso/WebAuthentication/Login.aspx
+	http://gmesceuat.hyundai-di.com/Apriso/WebAuthentication/Login.aspx
+ - UAT(OEM) :
+	http://gmesuatoem.hyundai-di.com/
+
+ - 운영 :
+	http://dimeswhm01.doosaninfracore.com/Apriso/Apriso/#/search
+	http://dimeswhm01.hyundai-di.com/Apriso/Apriso/#/search
+	http://gmesce.hyundai-di.com/Apriso/Apriso/#/search	
+	http://gmesce.hyundai-di.com/Apriso/start
+ - 운영(AD) :
+	http://gmeshv.doosaninfracore.com/
+	http://gmesce.hyundai-di.com/Apriso/WebAuthentication/Login.aspx
+ - 운영(OEM) :
+	http://gmesoem.hyundai-di.com/
+
+

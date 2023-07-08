@@ -1,0 +1,331 @@
+[작업 참고]
+1033 : 영어
+1042 : 한국어
+2052 : 중국어
+
+틀고정 : PP1195-ALLOC 평준화 소스 참고
+
+-- 인터페이스 테이블 존재여부 확인
+EXEC DI_SP_HV_MM_IFTABLE_EXISTS_YN
+
+DI_HV_CO_PP_COMMON_JS_CSS
+
+EXEC SP_HELP 'DI_CO_PP_WIP_ORDER'
+EXEC SP_LOCK 
+EXEC dbo.user_FindSPname 'MERGE'
+EXEC dbo.user_SelectDictionary N'제약'
+EXEC dbo.user_GetColumnNameComma 'DI_CO_PP_WIP_ORDER'
+EXEC dbo.DI_SP_USER_TABLE_COLUMNS 'DI_CO_PP_WIP_ORDER'
+EXEC dbo.DI_CO_SP_COMMON_CODE_COPY @Facility, @Module, @Code, @UserID
+
+dbo.APR_GEN_Translation_Medium(TextID, @LanguageID, '')
+dbo.DI_FN_FACILITY_NAME(DCSM.Facility, @LanguageID)
+dbo.DI_FN_HV_PP_GetModelName(A.ReleasedFacility, A.ModelCode)
+dbo.DI_FN_GetModelName(Facility, ModelCode)
+dbo.DI_FN_GetWorkCenterName(A.ReleasedFacility, A.WorkCenter, A.LanguageID)
+dbo.DI_FN_GetDepartmentName(A.ReleasedFacility, D.Department, A.LanguageID)
+dbo.DI_FN_GetProductNo(DCSM.Facility, DCSP.ProductID) -- 대표사양
+dbo.DI_FN_GetProductName(WI.ReleasedFacility, WI.ProductID, @LanguageID) -- 대표사양설명
+dbo.DI_FN_GetDetailCodeName(ISNULL(V.Facility, '1000'), 'PP', 'MultiLevel', V.MultiLevel, @LanguageID)
+dbo.DI_FNC_CO_GetDictionaryValue('DI_TITLE_Delete',@LanguageID,'M')
+TDHPAPO.OrderLine IN (SELECT [VALUE] FROM dbo.DI_FN_Split(@LINE, ','))
+
+ROW_NUMBER() OVER (ORDER BY DC.Seq ASC)
+ROW_NUMBER() OVER (PARTITION BY 컬럼명 ORDER BY DC.Seq ASC)
+SUM(RemainQty) OVER (ORDER BY SortOrder ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS SumRemainQty
+
+console.log("call_DI_HV_PC_PPCMAIN_REFRESH_ACT : " + message);
+
+SELECT ID, dbo.APR_GEN_Translation_Medium(TextID, 1033, ''),* FROM REVISION_STATUS
+/*
+0    Design in Progress
+1    Active
+2    Cancelled
+3    On Hold
+4    Prototype
+5    Compiling in Process
+6    Development in Progress
+*/
+
+SELECT * FROM OPERATION WHERE OperationCode = 'DI_HV_PC_PPCMAIN_PLAN_VIEW'
+/*
+BEGIN TRAN
+UPDATE OPERATION
+   SET RevisionStatusID = 4
+WHERE OperationCode = 'DI_HV_PC_PPCMAIN_PLAN_VIEW'
+*/
+--COMMIT
+
+-- DB LINK 확인
+SELECT * FROM master.dbo.sysservers 
+
+-- 테이블 용량
+EXEC dba_SpaceUsed 'FlexNet', 'U'
+EXEC sp_spaceused 'DI_HV_PP_ALLOC_PRIORITY'
+
+SELECT CONVERT(VARCHAR(30), MIN(o.name)) AS t_name     
+     , LTRIM(STR(SUM(reserved) * 8192.0 / 1024.0, 15, 0) + ' KB') AS t_size
+  FROM sysindexes i           
+       INNER JOIN sysobjects o 
+       ON o.id = i.id
+ WHERE i.indid IN (0, 1, 255)   
+   AND o.xtype = 'U'
+   AND o.name = 'DI_HV_PP_PROD_REPORT'       
+ GROUP BY i.id
+ ORDER BY t_name ASC, SUM(reserved) * 8192.0 / 1024.0 DESC
+ ;
+
+
+-- 테이블 건수
+SELECT o.name     
+     , i.rows
+  FROM sysindexes i           
+       INNER JOIN sysobjects o 
+       ON i.id = o.id
+ WHERE i.indid < 2   
+   AND o.xtype = 'U'
+   AND o.name = 'DI_HV_PP_PROD_REPORT'  
+ ORDER BY i.rows DESC
+ ; 
+
+-- SP 내용검색
+SELECT OBJECT_NAME(object_id)       AS SP_NAME
+     , OBJECT_DEFINITION(object_id) AS SP_CONTENT
+  FROM syVPPO.procedures
+ WHERE OBJECT_DEFINITION(object_id) LIKE '%DI_HV_PP_ALLOC_PRIORITY%'
+ ;
+
+ SELECT HC.Facility
+     , DC.Code                                              AS Code
+     , dbo.APR_GEN_Translation_Medium(DC.TextID, 1042, '')  AS Name
+  FROM DI_CO_TT_COMMON_HEAD_CODE HC WITH(NOLOCK)
+       INNER JOIN DI_CO_TT_COMMON_DETAIL_CODE DC WITH(NOLOCK)
+       ON  HC.ID   = DC.ID
+       AND HC.Code = DC.ParentCode 
+ WHERE HC.Facility IN ('1000', '1111', '1200')
+   AND HC.Module   = 'CO'
+   AND HC.Code     = 'VERSION_ID_CODE'	;
+
+
+-- CREATE PROCEDURE [dbo].[DICC_CO_PP_BOOM_ARM_KIT_INPUT_STATUS]( -- 참고
+DECLARE CUR_KIT_LIST CURSOR LOCAL FOR
+SQL 문
+OPEN CUR_KIT_LIST
+FETCH NEXT FROM CUR_KIT_LIST INTO @cProductionVersion,@cProductNo,@cModelCodeSerialNo,@cModelName,@cOperationStatus
+        
+WHILE (@@FETCH_STATUS = 0)
+BEGIN 
+
+    FETCH NEXT FROM CUR_KIT_LIST INTO @cProductionVersion,@cProductNo,@cModelCodeSerialNo,@cOperationStatus
+END
+
+IF (SELECT CURSOR_STATUS('global','CUR_KIT_LIST')) >= -1
+BEGIN
+  CLOSE CUR_KIT_LIST
+  DEALLOCATE CUR_KIT_LIST
+END
+
+ValueBag
+
+안녕하십니까? 이정원입니다.
+아래 건에 대한 배포 요청드립니다.
+
+
+감사합니다.
+
+
+DI_HV_PP_ALLOC_*_SCR
+DI_FN_HV_PP_GET_ALLOC_
+DI_SP_HV_PP_ALLOC_
+
+DI_SP_HV_LD_CREATE_PICKING_ORDER
+
+JWLEE_DI_HV_PP_ALLOC_PLAN_SCR
+JWLEE_DI_HV_PP_ALLOC_PLAN_FORM_VIEW
+
+취탈/검판까지 분석중
+
+DI_HV_PP_ALLOC_PLAN_ONLOAD_ACT
+
+
+DECLARE @iFacility		  NVARCHAR(20)  = '1000'    	  -- 공장
+      , @iFromDate   		  DATETIME      = '2023-01-01'  -- 계획일(From)
+      , @iToDate     		  DATETIME      = '2023-01-31'  -- 계획일(To)
+      , @iProductionVersion	  NVARCHAR(40)  = '0AM1'	  -- 생산라인
+      , @iFixShipmentMonth	  NVARCHAR(40)  = '202212'	  -- 확정선적년월
+      , @iEmployeeNo            NVARCHAR(40)  = 'iv0106464'   -- 사번
+      , @iUTC                   DATETIME      = GETUTCDATE()  -- UTC
+      , @LanguageID		  INT	          = 1042		  -- 언어    
+EXEC DI_SP_HV_PP_ALLOC_CAPA_ROOM_CREATE @iFacility, @iFromDate, @iToDate, @iProductionVersion, @iFixShipmentMonth, @iEmployeeNo, @iUTC, @LanguageID ;
+  
+
+DECLARE @iFacility		NVARCHAR(20)  = '1000'    	 -- 공장
+      , @iFromMonth   		NVARCHAR(10)  = '202301'	 -- 선적년월(From)
+      , @iToMonth     		NVARCHAR(10)  = '202301'	 -- 선적년월(To)
+      , @iProductionVersion	NVARCHAR(40)  = '0AM1'		 -- 생산라인
+      , @iDistrictCode		NVARCHAR(20)  = ''		 -- 지역
+      , @iProductID   		NVARCHAR(100) = ''             -- 대표사양
+      , @iFixShipmentMonth    NVARCHAR(100) = '202212'       -- 확정선적년월
+      , @iEmployeeNo          NVARCHAR(40)  = 'iv0106464'    -- 사번
+      , @iUTC                 DATETIME      = GETUTCDATE()   -- UTC
+      , @LanguageID		INT	        = 1042		 -- 언어    
+EXEC DI_SP_HV_PP_ALLOC_ROOM_CLEANUP @iFacility, @iFromMonth, @iToMonth, @iProductionVersion, @iDistrictCode, @iProductID, @iFixShipmentMonth, @iEmployeeNo, @iUTC, @LanguageID ;
+
+
+DECLARE @iFacility            NVARCHAR(20)  = '1000'        -- 공장
+      , @iFromMonth   		NVARCHAR(10)  = '202301'	-- 선적년월(From)
+      , @iToMonth     		NVARCHAR(10)  = '202301'	-- 선적년월(To)
+      , @iProductionVersion   NVARCHAR(40)  = '0AM1'        -- 생산라인
+      , @iEmployeeNo          NVARCHAR(40)  = 'iv0106464'   -- 사번
+      , @iUTC                 DATETIME      = GETUTCDATE()  -- UTC
+      , @LanguageID           INT           = 1042          -- 언어    
+EXEC DI_SP_HV_PP_ALLOC_ROOM_RESET @iFacility, @iFromMonth, @iToMonth, @iProductionVersion, @iEmployeeNo, @iUTC, @LanguageID ;
+
+
+DECLARE @Facility           NVARCHAR(20)  = '1000'            -- 공장
+	, @FromMonth   	    NVARCHAR(10)  = '202301'		  -- 선적년월(From)
+	, @ToMonth     	    NVARCHAR(10)  = '202301'		  -- 선적년월(To)
+	, @ProductionVersion  NVARCHAR(20)  = '0AM1'            -- 생산라인 
+	, @FixDate            NVARCHAR(10)  = '2023-01-06'      -- 확정일
+	, @LanguageID         INT           = 1042              -- 언어  
+	, @iEmployeeNo        NVARCHAR(40)  = 'iv0106464'       -- 사번
+	, @iUTC               DATETIME      = GETUTCDATE()      -- UTC  
+  
+EXEC DI_SP_HV_PP_ALLOC_LEVELING_CREATE @Facility, @FromMonth, @ToMonth, @ProductionVersion, @FixDate, @LanguageID, @iEmployeeNo, @iUTC ;
+
+
+
+
+DELETE FROM DI_HV_PP_ALLOC_INFO;
+DELETE FROM DI_HV_PP_ALLOC_PRIORITY;
+DELETE FROM DI_HV_PP_ALLOC_PRIORITY_OPTION;
+DELETE FROM DI_HV_PP_ALLOC_ROOM;
+DELETE FROM DI_HV_PP_ALLOC_ROOM_OPTION;
+DELETE FROM DI_HV_PP_ALLOC_LEVELING;
+
+SET IDENTITY_INSERT DI_HV_PP_ALLOC_INFO ON;
+INSERT INTO DI_HV_PP_ALLOC_INFO (
+		ID, AllocMonthID, PrevID, NextID, Facility, ShipYearMonth, DistrictCode, ProductID, ModelCode, ProductionVersion, ShipQty, ProdQty, EOH, Revision, EffectiveDate, StopDate, Remark, CupFlag, StandardMH, ReferenceID, LastUpdateOn, LastUpdatedBy, CreatedOn, CreatedBy, Active, LastDeleteOn, LastDeletedBy, LastReactivateOn, LastReactivatedBy, ArchiveID, LastArchiveOn, LastArchivedBy, LastRestoreOn, LastRestoredBy, RowVersionStamp
+)
+SELECT ID, AllocMonthID, PrevID, NextID, Facility, ShipYearMonth, DistrictCode, ProductID, ModelCode, ProductionVersion, ShipQty, ProdQty, EOH, Revision, EffectiveDate, StopDate, Remark, CupFlag, ISNULL(StandardMH, 0), ReferenceID, LastUpdateOn, LastUpdatedBy, CreatedOn, CreatedBy, Active, LastDeleteOn, LastDeletedBy, LastReactivateOn, LastReactivatedBy, ArchiveID, LastArchiveOn, LastArchivedBy, LastRestoreOn, LastRestoredBy, RowVersionStamp
+  FROM [DIMESDB01_FLEXNET].[FlexNet].[dbo].[DI_HV_PP_ALLOC_INFO];
+SET IDENTITY_INSERT DI_HV_PP_ALLOC_INFO OFF;
+
+
+SET IDENTITY_INSERT DI_HV_PP_ALLOC_PRIORITY ON;
+INSERT INTO DI_HV_PP_ALLOC_PRIORITY (
+		ID, AllocInfoID, AllocRoomID, Facility, ShipYearMonth, DistrictCode, ProductID, ModelCode, ProductionVersion, Capacity, YearMonth, PlanDate, PlanSeq, CountryCode, CountryName, SalesOrderNo, WipOrderNo, ModelCodeSerialNo, PriorPriority, Priority, StandardMH, Remark, OrderType, MappingType, ReferenceID, LastUpdateOn, LastUpdatedBy, CreatedOn, CreatedBy, Active, LastDeleteOn, LastDeletedBy, LastReactivateOn, LastReactivatedBy, ArchiveID, LastArchiveOn, LastArchivedBy, LastRestoreOn, LastRestoredBy, RowVersionStamp
+)
+SELECT ID, AllocInfoID, AllocRoomID, Facility, ShipYearMonth, DistrictCode, ProductID, ModelCode, ProductionVersion, Capacity, YearMonth, PlanDate, PlanSeq, CountryCode, CountryName, SalesOrderNo, WipOrderNo, ModelCodeSerialNo, PriorPriority, Priority, ISNULL(StandardMH, 0), Remark, OrderType, MappingType, ReferenceID, LastUpdateOn, LastUpdatedBy, CreatedOn, CreatedBy, Active, LastDeleteOn, LastDeletedBy, LastReactivateOn, LastReactivatedBy, ArchiveID, LastArchiveOn, LastArchivedBy, LastRestoreOn, LastRestoredBy, RowVersionStamp
+  FROM [DIMESDB01_FLEXNET].[FlexNet].[dbo].[DI_HV_PP_ALLOC_PRIORITY];
+SET IDENTITY_INSERT DI_HV_PP_ALLOC_PRIORITY OFF;
+
+
+SET IDENTITY_INSERT DI_HV_PP_ALLOC_PRIORITY_OPTION ON;
+INSERT INTO DI_HV_PP_ALLOC_PRIORITY_OPTION (
+		ID, AllocPriorityID, CNT, O_HPE3, O_HPER, O_HROT, O_HQUF, O_HTWP, O_HLOC, O_ADOZ, O_HSTT, O_HBFL, O_EDHR, O_HBRF, O_UGUA, O_HLEV, O_ABOM, Remark, ReferenceID, LastUpdateOn, LastUpdatedBy, CreatedOn, CreatedBy, Active, LastDeleteOn, LastDeletedBy, LastReactivateOn, LastReactivatedBy, ArchiveID, LastArchiveOn, LastArchivedBy, LastRestoreOn, LastRestoredBy, RowVersionStamp
+)
+SELECT ID, AllocPriorityID, ISNULL(CNT, 0), ISNULL(O_HPE3, 0), ISNULL(O_HPER, 0), ISNULL(O_HROT, 0), ISNULL(O_HQUF, 0), ISNULL(O_HTWP, 0), ISNULL(O_HLOC, 0), ISNULL(O_ADOZ, 0), ISNULL(O_HSTT, 0), ISNULL(O_HBFL, 0), ISNULL(O_EDHR, 0), ISNULL(O_HBRF, 0), ISNULL(O_UGUA, 0), ISNULL(O_HLEV, 0), ISNULL(O_ABOM, 0), Remark, ReferenceID, LastUpdateOn, LastUpdatedBy, CreatedOn, CreatedBy, Active, LastDeleteOn, LastDeletedBy, LastReactivateOn, LastReactivatedBy, ArchiveID, LastArchiveOn, LastArchivedBy, LastRestoreOn, LastRestoredBy, RowVersionStamp
+  FROM [DIMESDB01_FLEXNET].[FlexNet].[dbo].[DI_HV_PP_ALLOC_PRIORITY_OPTION];
+SET IDENTITY_INSERT DI_HV_PP_ALLOC_PRIORITY_OPTION OFF;
+
+
+SET IDENTITY_INSERT DI_HV_PP_ALLOC_ROOM ON;
+INSERT INTO DI_HV_PP_ALLOC_ROOM (
+		ID, AllocInfoID, Facility, ShipYearMonth, DistrictCode, ProductID, ModelCode, ProductionVersion, ProdQty, AllocRoomSeq, LimitDateType, LimitDate, StandardMH, Remark, ReferenceID, LastUpdateOn, LastUpdatedBy, CreatedOn, CreatedBy, Active, LastDeleteOn, LastDeletedBy, LastReactivateOn, LastReactivatedBy, ArchiveID, LastArchiveOn, LastArchivedBy, LastRestoreOn, LastRestoredBy, RowVersionStamp
+)
+SELECT ID, AllocInfoID, Facility, ShipYearMonth, DistrictCode, ProductID, ModelCode, ProductionVersion, ProdQty, AllocRoomSeq, LimitDateType, LimitDate, ISNULL(StandardMH, 0), Remark, ReferenceID, LastUpdateOn, LastUpdatedBy, CreatedOn, CreatedBy, Active, LastDeleteOn, LastDeletedBy, LastReactivateOn, LastReactivatedBy, ArchiveID, LastArchiveOn, LastArchivedBy, LastRestoreOn, LastRestoredBy, RowVersionStamp
+  FROM [DIMESDB01_FLEXNET].[FlexNet].[dbo].[DI_HV_PP_ALLOC_ROOM];
+SET IDENTITY_INSERT DI_HV_PP_ALLOC_ROOM OFF;
+
+
+SET IDENTITY_INSERT DI_HV_PP_ALLOC_ROOM_OPTION ON;
+INSERT INTO DI_HV_PP_ALLOC_ROOM_OPTION (
+		ID, AllocRoomID, OptionWeightQty, O_HPE3, O_HPER, O_HROT, O_HQUF, O_HTWP, O_HLOC, O_ADOZ, O_HSTT, O_HBFL, O_EDHR, O_HBRF, O_UGUA, O_HLEV, O_ABOM, Remark, ReferenceID, LastUpdateOn, LastUpdatedBy, CreatedOn, CreatedBy, Active, LastDeleteOn, LastDeletedBy, LastReactivateOn, LastReactivatedBy, ArchiveID, LastArchiveOn, LastArchivedBy, LastRestoreOn, LastRestoredBy, RowVersionStamp
+)
+SELECT ID, AllocRoomID, ISNULL(OptionWeightQty, 0), ISNULL(O_HPE3, 0), ISNULL(O_HPER, 0), ISNULL(O_HROT, 0), ISNULL(O_HQUF, 0), ISNULL(O_HTWP, 0), ISNULL(O_HLOC, 0), ISNULL(O_ADOZ, 0), ISNULL(O_HSTT, 0), ISNULL(O_HBFL, 0), ISNULL(O_EDHR, 0), ISNULL(O_HBRF, 0), ISNULL(O_UGUA, 0), ISNULL(O_HLEV, 0), ISNULL(O_ABOM, 0), Remark, ReferenceID, LastUpdateOn, LastUpdatedBy, CreatedOn, CreatedBy, Active, LastDeleteOn, LastDeletedBy, LastReactivateOn, LastReactivatedBy, ArchiveID, LastArchiveOn, LastArchivedBy, LastRestoreOn, LastRestoredBy, RowVersionStamp
+  FROM [DIMESDB01_FLEXNET].[FlexNet].[dbo].[DI_HV_PP_ALLOC_ROOM_OPTION];
+SET IDENTITY_INSERT DI_HV_PP_ALLOC_ROOM_OPTION OFF;
+
+
+SET IDENTITY_INSERT DI_HV_PP_ALLOC_LEVELING ON;
+INSERT INTO DI_HV_PP_ALLOC_LEVELING (
+		ID, Facility, ShipYearMonth, ProductionVersion, LevelingType, DistrictGroupCode, DistrictCode, ModelCode, AllocProdQty, AllocRoomQty, MappingQty, FixQty, RemainQty, LimitDate, GapQty, SortOrder, Remark, ReferenceID, LastUpdateOn, LastUpdatedBy, CreatedOn, CreatedBy, Active, LastDeleteOn, LastDeletedBy, LastReactivateOn, LastReactivatedBy, ArchiveID, LastArchiveOn, LastArchivedBy, LastRestoreOn, LastRestoredBy, RowVersionStamp
+)
+SELECT ID, Facility, ShipYearMonth, ProductionVersion, LevelingType, DistrictGroupCode, DistrictCode, ModelCode, AllocProdQty, AllocRoomQty, MappingQty, FixQty, RemainQty, LimitDate, GapQty, SortOrder, Remark, ReferenceID, LastUpdateOn, LastUpdatedBy, CreatedOn, CreatedBy, Active, LastDeleteOn, LastDeletedBy, LastReactivateOn, LastReactivatedBy, ArchiveID, LastArchiveOn, LastArchivedBy, LastRestoreOn, LastRestoredBy, RowVersionStamp
+  FROM [DIMESDB01_FLEXNET].[FlexNet].[dbo].[DI_HV_PP_ALLOC_LEVELING];
+SET IDENTITY_INSERT DI_HV_PP_ALLOC_LEVELING OFF;
+
+
+// 평준화 버튼 클릭
+function fnAllocLeveling(){
+	alert(CON_LEFT_CONTEXDHPAPO.literalVPPO.ERR_NotData);
+}
+
+documenDHPAPO.addEventListener('readystatechange', (event) => {
+  if(evenDHPAPO.targeDHPAPO.readyState == 'interactive') {
+    tabAction = docViewContexDHPAPO.inputVPPO.TabAction;
+    userLanguageID = docViewContexDHPAPO.inputVPPO.LanguageID;
+    userFacility = docViewContexDHPAPO.inputVPPO.Facility;
+    
+    
+        inputFacility          = documenDHPAPO.querySelector('.Control.fc_EXT_FacilityForSearch select');
+    inputWipOrderNo        = documenDHPAPO.querySelector('.Control.fc_EXT_WipOrderNoForSearch input');
+    inputSalesOrderNo      = documenDHPAPO.querySelector('.Control.fc_EXT_SalesOrderNoForSearch input');
+    inputModelCodeSerialNo = documenDHPAPO.querySelector('.Control.fc_EXT_ModelCodeSerialNoForSearch input');
+    inputWorkCenter        = documenDHPAPO.querySelector('.Control.fc_EXT_WorkCenterForSearch select');
+    
+    selectedWorkCenter     = inputWorkCenter.querySelector('option[selected="selected"]').value;
+
+    documenDHPAPO.querySelector('.Control.fc_BTN_SEARCH button').removeAttribute('onclick');
+  }
+});
+
+<div data-flx-subop="Call_DI_HV_PPM_POST_PROGRAM_VIEW"/>
+
+
+DI_HV_PC_GET_STATUS_BOARD_DATA_OPR
+
+[Git 편집기로서의 VS Code]
+1. code --help명령줄에서 실행할 수 있는지 확인 하고 도움을 받으세요.
+  - Windows: 설치 중에 PATH에 추가를 선택했는지 확인하십시오 .
+  - C:\Users\iv0106464\AppData\Local\Programs\Microsoft VS Code\_\
+2. 명령줄에서 다음을 실행합니다.
+  - git config --global core.editor "code --wait"
+
+3. 설정
+git config --global -e
+##########################
+[diff]
+    tool = default-difftool
+[difftool "default-difftool"]
+    cmd = code --wait --diff $LOCAL $REMOTE
+[merge]
+    tool = code
+[mergetool "code"]
+    cmd = code --wait --merge $REMOTE $LOCAL $BASE $MERGED
+
+  
+
+HDIHVAPPDEV01
+gmesce.hyundai-di.com
+gmescoe.hyundai-di.com
+
+diwin388.hdcegroup.hhi.co.kr
+hdihvappdev01.hdcegroup.hhi.co.kr
+diwin390.hdcegroup.hhi.co.kr
+diwin396.hdcegroup.hhi.co.kr
+
+
+
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+  <SOAP-ENV:Body>
+    <ser-root:DIMM_PURCHASING_280_MResponse xmlns:ser-root="http://10.224.130.57:4444/ws/di_srm3.serv.main" SOAP-ENC:root="1">
+      <O_MESSAGE xsi:type="xsd:string">Data not found</O_MESSAGE>
+      <O_RESULT xsi:type="xsd:string">E</O_RESULT>
+      <T_COMPONENT xmlns:sc1="http://localhost/di_srm3/serv/main/DIMM_PURCHASING_280_M" xsi:type="SOAP-ENC:Array" SOAP-ENC:arrayType="sc1:__T_COMPONENT[0]" id="id1" />
+      <T_HEADER xmlns:sc1="http://localhost/di_srm3/serv/main/DIMM_PURCHASING_280_M" xsi:type="SOAP-ENC:Array" SOAP-ENC:arrayType="sc1:__T_HEADER[0]" id="id2" />
+      <T_ITEM xmlns:sc1="http://localhost/di_srm3/serv/main/DIMM_PURCHASING_280_M" xsi:type="SOAP-ENC:Array" SOAP-ENC:arrayType="sc1:__T_ITEM[0]" id="id3" />
+    </ser-root:DIMM_PURCHASING_280_MResponse>
+  </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>
