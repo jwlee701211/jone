@@ -1,3 +1,695 @@
+<div class="ToastUI-MainView">
+	<div class="ToastUI-Container">
+		<div class="ToastUI-ButtonGroup">
+			<button type="button" onclick="gfnTuiExcelExport(TOAST_GRID, GRID_GROUP)" class="Button ExcelExport"><i class="fa fa-download" aria-hidden="true" style="font-weight:bold;"></i></button>
+			<button type="button" onclick="gfnTuiFilterClear(TOAST_GRID, GRID_GROUP)" class="Button FilterClear">{@DI_COL_FilterClear:text}<i class="fa fa-magic" aria-hidden="true" style="font-weight:bold;"></i></button>
+		</div>
+		<div class="ToastUI-GridGroup">
+			<div id="InventoryBalanceList" class="tuiGrid InventoryBalanceList Active"></div>
+		</div>
+	</div>
+</div>
+<script>
+let BODY_CONTEXT = $Context;
+let btnSearch    = document.querySelector('.Control.fc_BTN_Search button');
+
+//gfnAprisoKeydownUnbind();
+let FormButton = document.querySelectorAll('.DIOEM_HV_MM_INVENTORY_BALANCE_FORM_VIEW .FormContainer button');
+if(FormButton && FormButton.length > 0){
+	FormButton.forEach((button) => { button.removeAttribute('onclick') })
+}
+</script>
+
+//###############################################################################################################//
+//###############################################################################################################//
+//###############################################################################################################//
+//###############################################################################################################//
+//###############################################################################################################//
+
+// ready
+$(document).ready(function(){
+	// 공통 버튼 설정
+	CONT_BUTTON_CONFIG = {btnComSearch : true, btnComInventoryBalance : false, btnComInventoryMaster : true, btnComMaterialMaster : true, btnComInventoryPO : true};
+	
+	// 화면 그리드 설정
+	REQUEST_CODE = "DIOEM_HV_MM_INVENTORY_BALANCE_SCR";
+	TOAST_GRID   = {InventoryBalanceList : gfnToastGrid('InventoryBalanceList', null, "rowNum")};
+	HEADER_COUNT = Object.keys(TOAST_GRID).length;
+	ROW_COUNT    = Object.keys(TOAST_GRID).length;
+	GRID_GROUP   = document.querySelector('.ToastUI-Container .ToastUI-GridGroup');
+
+	// 공통 Button 셋팅
+	gfnSetComButton();
+
+	// 그리드 헤더 요청
+	fnHeaderRequest();
+});
+
+//이벤트 처리
+document.addEventListener('readystatechange', (event) => {
+    if (event.target.readyState == 'interactive') {
+		// 조회 버튼 클릭시 
+		if(btnSearch){
+			btnSearch.addEventListener('click', fnSearch, false);
+		}
+	}
+})
+
+// 조회
+function fnSearch(){
+	if(fnVaildCheck()){
+		$('.loadingLayer').show();
+		
+		// 재고Balance 정보 조회 Ajax	
+		fnGetInventoryBalanceInfo();
+		
+		// 재고Balance 목록 요청 
+		fnRowRequest();
+	}
+}
+
+// 조회조건 체크
+function fnVaildCheck(){
+	// 조회조건 체크
+	if(!gProductNo.value){
+		alert(BODY_CONTEXT.literals.DI_ERR_ProductNo);
+		gProductNo.focus();
+		return false;
+	}
+	return true;
+}
+
+// [화면] Toast Grid Header 요청
+async function fnHeaderRequest(){	
+	$('.loadingLayer').show();
+	
+	const headRequest = await Promise.allSettled([
+        gfnRequestGridData(gfnSetSearchConditions("HEADER", "InventoryBalanceList"), gfnSetGridHeader),
+		
+    ]);
+}
+
+// [화면] Toast Grid Data 요청
+async function fnRowRequest(){
+	$('.loadingLayer').show();
+	
+	const rowRequest = await Promise.allSettled([
+		gfnRequestGridData(gfnSetSearchConditions("ROW", "InventoryBalanceList"), gfnSetGridRow, fnPositiveQtyClassApply),
+	]);
+}
+
+// 2023-09-21, Kim CheolEon : 수량 양수일 경우 표시 (전왕 책임 요청)
+function fnPositiveQtyClassApply(tuiObj, jsonDdata)
+{
+	let grid = tuiObj;
+	
+	if(grid)
+	{
+		let gridData = grid.getData();
+		if(gridData.length > 0)
+		{
+			for(let row of gridData)
+			{
+				rowKey = parseInt(row.rowKey);
+				
+				if(rowKey == 0) continue; //첫번째 집계행 제외
+				
+				qty = parseInt(row.RequiredQty);
+				if(!Number.isNaN(qty) && qty > 0)
+				{
+					grid.addRowClassName(rowKey, 'bgColLightBlue');
+				}
+				else
+				{
+					grid.removeRowClassName(rowKey, 'bgColLightBlue');
+				}
+			}
+		}
+	}
+}
+
+
+// 재고Balance 정보 조회 Ajax
+function fnGetInventoryBalanceInfo(){
+    var inputs = {};
+	inputs.EXT_Facility_SC  = gFacility  ? gFacility.value  : "";
+	inputs.EXT_ProductNo_SC = gProductNo ? gProductNo.value : "";
+	
+	//console.log("fnGetInventoryBalanceInfo ::: inputs ===> " + JSON.stringify(inputs));	
+    BODY_CONTEXT.callOperation('DIOEM_HV_MM_GET_INVENTORY_BALANCE_INFO_OPR', inputs,
+        function(outputs){ 
+			//console.log("fnGetInventoryBalanceInfo ::: outputs ===> " + JSON.stringify(outputs));
+			if(outputs){
+				$(".Control.fc_EXT_ProductPurchaseLargeName input").val(outputs.EXT_ProductPurchaseLargeName);
+				$(".Control.fc_EXT_CurrentStock input").val(outputs.EXT_CurrentStock);
+				$(".Control.fc_EXT_RegularReservationInstructionQty input").val(outputs.EXT_RegularReservationInstructionQty);
+				$(".Control.fc_EXT_ProductSupplyName input").val(outputs.EXT_ProductSupplyName);
+				$(".Control.fc_EXT_PurchaseRequiredQty input").val(outputs.EXT_PurchaseRequiredQty);
+				$(".Control.fc_EXT_PreStockQty input").val(outputs.EXT_PreStockQty);
+				$(".Control.fc_EXT_ProcurementName input").val(outputs.EXT_ProcurementName);
+				$(".Control.fc_EXT_SafetyStockQty input").val(outputs.EXT_SafetyStockQty);
+				$(".Control.fc_EXT_ExceptionReservationInstructionQty input").val(outputs.EXT_ExceptionReservationInstructionQty);
+				$(".Control.fc_EXT_PurchaseOrderQty input").val(outputs.EXT_PurchaseOrderQty);
+				$(".Control.fc_EXT_ERPInventoryQty input").val(outputs.EXT_ERPInventoryQty);
+				$(".Control.fc_EXT_PlanController input").val(outputs.EXT_PlanController);
+				$(".Control.fc_EXT_EndLineInventoryQty input").val(outputs.EXT_EndLineInventoryQty);
+				$(".Control.fc_EXT_TotDefectQty input").val(outputs.EXT_TotDefectQty);
+				$(".Control.fc_EXT_PurchaseTypeName input").val(outputs.EXT_PurchaseTypeName);
+			}else{
+				$(".Control.fc_EXT_ProductPurchaseLargeName input").val("");
+				$(".Control.fc_EXT_CurrentStock input").val("");
+				$(".Control.fc_EXT_RegularReservationInstructionQty input").val("");
+				$(".Control.fc_EXT_ProductSupplyName input").val("");
+				$(".Control.fc_EXT_PurchaseRequiredQty input").val("");
+				$(".Control.fc_EXT_PreStockQty input").val("");
+				$(".Control.fc_EXT_ProcurementName input").val("");
+				$(".Control.fc_EXT_SafetyStockQty input").val("");
+				$(".Control.fc_EXT_ExceptionReservationInstructionQty input").val("");
+				$(".Control.fc_EXT_PurchaseOrderQty input").val("");
+				$(".Control.fc_EXT_ERPInventoryQty input").val("");
+				$(".Control.fc_EXT_PlanController input").val("");
+				$(".Control.fc_EXT_EndLineInventoryQty input").val("");
+				$(".Control.fc_EXT_TotDefectQty input").val("");
+				$(".Control.fc_EXT_PurchaseTypeName input").val("");	
+			}	
+        },
+        function(message) {
+            alert(message);
+        });
+}
+//###############################################################################################################//
+//###############################################################################################################//
+//###############################################################################################################//
+//###############################################################################################################//
+//###############################################################################################################//
+
+<div class="ToastUI-MainView">
+	<div class="ToastUI-Container">
+		<div class="ToastUI-ButtonGroup">
+			<div class="ToastUI-SubGroup Left">
+				<button type="button" onclick="fnPickingBarcodeRequest()" class="Button fa fa-search">{@DI_COL_DetailSearch:text}</button>
+			</div>
+			<div class="ToastUI-SubGroup Middle">
+				<!-- -->
+			</div>
+			<div class="ToastUI-SubGroup Right">
+				{? PickingRole == true ? <button type="button" onclick="fnRePicking();" class="Button RePicking fa fa-retweet">{@DI_COL_RegeneratePicking:text}</button> : ?}
+				<button type="button" onclick="fnPickingBarcodeExcelExport()" class="Button ExcelExport fa fa-download"></button>
+				<button type="button" onclick="gfnTuiFilterClear(TOAST_GRID, GRID_GROUP)" class="Button FilterClear fa fa-magic"></button>
+			</div>
+		</div>
+		<div class="ToastUI-GridGroup">
+			<div class="ToastUI-SubGroup Left">
+				<div id="PickingOrderList" class="tuiGrid PickingOrderList Active"></div>
+			</div>
+			<div class="ToastUI-SubGroup Middle">
+				<div id="PickingWorkCenterList" class="tuiGrid PickingWorkCenterList Active"></div>
+			</div>
+			<div class="ToastUI-SubGroup Right">
+				<div id="PickingBarcodeList" class="tuiGrid PickingBarcodeList Active"></div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<template>
+{@DI_ERR_PickingOrderSelectRequired:text}
+{@DI_TITLE_Confirmation:text}
+{@DI_MNT_IncompleteAlertMessage:text}
+{@DI_ERR_EntryNO:text}
+{@DI_ERR_PickingDetailSearchNotEqual:text}
+{@DIOEM_HV_MM_PICKING_GRID_VIEW:text}
+{@DI_COL_ConfirmRegeneratePickingOrder:text}
+{@DI_ERR_SELECT_DATA:text}
+</template>
+
+<script>
+let BODY_CONTEXT  = $Context;
+
+//2023-09-06, Kim CheolEon : Apriso Simple conditionals 로 변경
+//$(document).ready(function(){
+//	let btnRegeneratePicking = BODY_CONTEXT.literals.DI_COL_RegeneratePicking;
+//
+//	// 피킹 권한 소유자에게만 버튼이 활성화됨
+//	if(BODY_CONTEXT.inputs.PickingRole){
+//		$(".ToastUI-ButtonGroup").prepend('<button type="button" onclick="fnRePicking();" class="Button RePicking fa fa-retweet" style="font-weight: bold;"> '+btnRegeneratePicking+'</button>');
+//	}
+//});
+</script>
+
+//###############################################################################################################//
+//###############################################################################################################//
+//###############################################################################################################//
+//###############################################################################################################//
+//###############################################################################################################//
+
+var REQUEST_CODE  = "DIOEM_HV_MM_PICKING_SCR";
+var TOAST_GRID   = {
+	                 PickingOrderList   : gfnToastGrid('PickingOrderList',   null, "checkbox") // checkbox
+	               , PickingWorkCenterList : gfnToastGrid('PickingWorkCenterList', null, "checkbox")
+				   , PickingBarcodeList : gfnToastGrid('PickingBarcodeList', null, "rowNum")
+				   };
+var GRID_GROUP    = document.querySelector('.ToastUI-Container .ToastUI-GridGroup');
+var SEARCH_BUTTON = document.querySelector('.Control.fc_BTN_Search button');
+
+let FormButton = document.querySelectorAll('.DIOEM_HV_MM_PICKING_FORM_VIEW .FormContainer button');
+if(FormButton && FormButton.length > 0){
+	FormButton.forEach((button) => { button.removeAttribute('onclick') })
+}
+
+
+/* ToastGrid 할당 변수 */
+let sGrid = TOAST_GRID["PickingOrderList"];
+let wGrid = TOAST_GRID["PickingWorkCenterList"];
+let tGrid = TOAST_GRID["PickingBarcodeList"];
+let dschWipOrderNoList = [];
+
+//let PCKING_BARCODE_CONDITIONS = null;
+
+// 화면 진입 후 DOM 준비 시 시행 이벤트
+document.addEventListener('readystatechange', (event) => {
+    if (event.target.readyState == 'interactive') {
+		// 공통 버튼 설정
+		CONT_BUTTON_CONFIG = {btnComSearch : true, btnComInventoryBalance : true, btnComInventoryMaster : true, btnComMaterialMaster : true, btnComInventoryPO : true};
+		
+		// 조회 버튼 클릭 이벤트 발생시 
+		if(SEARCH_BUTTON) {
+			SEARCH_BUTTON.addEventListener('click', fnRowRequest) ;
+		}
+
+		// [병행]Toast Grid Header 요청
+		gfnConcurrencyRequest([
+			  gfnRequestGridData(gfnSetSearchConditions("HEADER", "PickingOrderList"),       gfnSetGridHeader)
+			, gfnRequestGridData(gfnSetSearchConditions("HEADER", "PickingWorkCenterList"),  gfnSetGridHeader)
+			, gfnRequestGridData(gfnSetSearchConditions("HEADER", "PickingBarcodeList"),     gfnSetGridHeader)
+		], "HEADER") ;
+	}
+})
+
+
+// [화면] Toast Grid Data 요청
+// 최상단 조회조건을 통한 조회는, WipOrderNo 에 대한 1차 조회.
+async function fnRowRequest(){
+	$('.loadingLayer').show();
+	
+    gfnConcurrencyRequest([
+         gfnRequestGridData(gfnSetSearchConditions("ROW", "PickingOrderList"),   gfnSetGridRow, fnOrderStatusClassApply)
+	], "ROW") ;
+}
+
+
+// [화면] Toast Grid Data 요청2
+// 상세조회는, 선택된 WipOrderNo 를 통해 => 작업장, 피킹바코드 목록을 2차 조회
+function fnPickingBarcodeRequest()
+{
+	chkOrderList = sGrid ? sGrid.getCheckedRows() : [];
+	
+	if(chkOrderList.length > 0)
+	{	
+		let wiporderList = chkOrderList.map(item => item.WipOrderNo);
+		//2023-09-18, Kim CheolEon 상세조회 시 선택된 WipOrderNo 임시저장
+		dschWipOrderNoList = wiporderList;
+		
+		//피킹바코드 조회옵션 - 재정의
+		let searchB = gfnSetSearchConditions("ROW", "PickingBarcodeList");
+		let searchB_JSON = JSON.parse(searchB.EXT_SearchConditionJSON)
+		searchB_JSON.WipOrderNoText = wiporderList.join(',');
+		
+		searchB.EXT_SearchConditionJSON = JSON.stringify(searchB_JSON);
+
+		
+		//작업장 조회옵션 - 재정의
+		let searchW = gfnSetSearchConditions("ROW", "PickingWorkCenterList");
+		let searchW_JSON = JSON.parse(searchW.EXT_SearchConditionJSON);
+		searchW_JSON.WipOrderNoText = wiporderList.join(',');
+		
+		searchW.EXT_SearchConditionJSON = JSON.stringify(searchW_JSON);
+		
+		
+		$('.loadingLayer').show();
+		
+		gfnConcurrencyRequest([
+	         gfnRequestGridData(searchB, gfnSetGridRow, fnBarcodeStatusClassApply)
+	        ,gfnRequestGridData(searchW, gfnSetGridRow, fnSaveWorkCenterList)
+		], "ROW") ;
+	}
+	else
+	{
+		gfnShowSnackBar('error', BODY_CONTEXT.literals.DI_ERR_PickingOrderSelectRequired);
+	}
+}
+
+
+
+/* *********************************************************************************************
+	2023-09-05, Kim CheolEon : PickingOrderWorkCenter 추가
+		1. 오더 선택 시, 작업장 목록 갱신.
+		2. 작업장 선택 시, 바코드목록 필터 적용 (작업장)
+		3. 작업장 해제 시, 바코드목록 필터 해제 (작업장)
+		
+	2023-09-06, Kim CheolEon : 조회 순서 변경
+		1. 조건 입력 후 조회 시, 피킹 오더만 조회
+		2. 좌측 Grid (PickingOrderList) 위의 조회 버튼 누를 시, PickingBarcodeList 의 데이터 조회 (OrderNo)
+	
+*/
+var WORKCENTER_DATA;
+
+function fnSaveWorkCenterList(_grid, _json)
+{
+	if(_grid, _json)
+	{
+		_grid.resetData([]);
+		
+		let parse = JSON.parse(_json);
+		WORKCENTER_DATA = parse;
+	}
+	
+	fnSetWorkCenterGridRow();
+}
+
+function fnSetWorkCenterGridRow()
+{
+	let chkOrderRows = sGrid.getCheckedRows();
+
+	wGrid.resetData([]);
+	
+	if(chkOrderRows && WORKCENTER_DATA)
+	{
+		if(chkOrderRows.length > 0 && WORKCENTER_DATA.length > 0)
+		{
+			let chkWipOrderNoList = [];
+			//chkWipOrderNoList = Object.values(chkOrderRows).map(item => item.WipOrderNo);
+			chkWipOrderNoList = chkOrderRows.map(item => item.WipOrderNo);
+			
+			if(chkWipOrderNoList.length > 0)
+			{
+				let existsData = WORKCENTER_DATA.filter(item => chkWipOrderNoList.includes(item.WipOrderNo))
+				if(existsData.length > 0)
+				{
+					//중복 작업장 삭제 (WipOrderNo 는 Order랑 비교했으니 더이상 필요없음)
+					let distinct = existsData.filter((item, index, callback) => index === callback.findIndex(t => t.WorkCenterCode === item.WorkCenterCode))
+					
+					if(distinct.length > 0)
+					{
+						reset = false;
+						
+						wGrid.resetData([]);
+						
+						wGrid.resetData(distinct);
+						
+						// 초기 작업장 전체 선택
+						wGrid.checkAll();
+					}
+				}
+			}
+		}
+	}
+}
+
+wGrid.on('check', (evt) => fnWorkCenterRowCheck(evt, 'check'))
+wGrid.on('checkAll', (evt) => fnWorkCenterRowCheck(evt, 'checkAll'))
+wGrid.on('uncheck', (evt) => fnWorkCenterRowCheck(evt, 'uncheck'))
+wGrid.on('uncheckAll', (evt) => fnWorkCenterRowCheck(evt, 'uncheckAll'))
+function fnWorkCenterRowCheck(_evt, _type)
+{
+	if(_evt)
+	{
+		let checkRow = _evt.instance.getCheckedRows();
+		if(checkRow.length > 0)
+		{
+			//let workcenterList = checkRow.map(item => item.WorkCenterCode)
+			let workcenterList = checkRow.map(item => item.WorkCenter)
+			if(workcenterList.length > 0 && tGrid)
+			{
+				let filterList = [];
+				
+				for(const elment of workcenterList)
+				{
+					opt = {code: "eq", value: elment};
+					filterList.push(opt);
+				}
+				tGrid.setFilter("WorkCenter", {type: "text", operator: "OR"});
+				tGrid.filter("WorkCenter", filterList);
+			}
+		}
+		else
+		{
+			//tGrid.unfilter("WorkCenter");
+			tGrid.setFilter("WorkCenter", {code: "eq", value: " "});
+		}
+	}
+	else
+	{
+		//tGrid.unfilter("WorkCenter");
+		tGrid.setFilter("WorkCenter", {code: "eq", value: " "});
+	}
+}
+
+/* ********************************************************************************************* */
+
+// 오더목록 피킹상태 class 적용
+function fnOrderStatusClassApply(oGrid, aJSONData) {
+	
+	wGrid ? wGrid.resetData([]) : null;
+	tGrid ? tGrid.resetData([]) : null;
+	
+	let aValues = sGrid.getData();
+	let rowKey  = 0;
+	
+	if (aValues.length){
+		for(let val of aValues){
+			rowKey = parseInt(val.rowKey);
+			if(val.OrderPickingStatus === "[30] 피킹List발행"){
+
+				sGrid.addRowClassName(rowKey, "bgColDarkGray");
+
+			}else{
+				sGrid.removeRowClassName(rowKey, "bgColDarkGray");
+			}
+		}
+	}
+}
+
+// 바코드목록 피킹상태 class 적용
+function fnBarcodeStatusClassApply(oGrid, aJSONData) {
+	let aValues = tGrid.getData();
+	let rowKey  = 0;
+
+	if (aValues.length){
+		$('.loadingLayer').show();
+		
+		for(let val of aValues){
+			rowKey = parseInt(val.rowKey);
+			if(val.OrderPickingStatus === "[30] 피킹List발행"){
+			
+				tGrid.addRowClassName(rowKey, "bgColDarkGray");
+			
+			}else{
+				tGrid.removeRowClassName(rowKey, "bgColDarkGray");
+			}
+		}
+		
+		$('.loadingLayer').hide();
+	}
+	
+	// 바코드목록 필터 초기화
+	//fnInitBarcodeFilter();
+	//fnBoacodeFilter();
+}
+
+
+
+// 바코드 목록 그리드 Excel Export
+function fnPickingBarcodeExcelExport() 
+{
+	/*	CHECK [1]	*/
+	if( !(tGrid) )
+	{
+		gfnShowSnackBar('error', "Grid를 찾을 수 없습니다.");
+		return;
+	}
+	
+	let cDate = new Date();
+	let yyyyMMddhhmmss = "".concat(
+		cDate.getFullYear() 
+	   ,gfnPad((1 + cDate.getMonth()), "2") 
+	   ,gfnPad(cDate.getDate(), "2") 
+	   ,cDate.getHours() 
+	   ,cDate.getMinutes() 
+	   ,cDate.getSeconds() 
+	   ,cDate.getMilliseconds()
+	);
+	const options = {
+		fileName: "".concat(tGrid.el.id, '_ExcelExport'),
+		onlyFiltered: true,
+	};
+	options.fileName = "".concat(options.fileName, "_"+yyyyMMddhhmmss);
+	
+	tGrid.export('xlsx', options);
+	
+	/*	CHECK [2]	*/
+	//피킹번호 목록(필터된 row)에 행이 있는가?
+	let barcodeList = tGrid.getFilteredData();
+	if( !(barcodeList.length > 0) )
+	{
+		gfnShowSnackBar('error', "".concat(BODY_CONTEXT.literals.DI_ERR_EntryNO, ' : PickingNo'));
+		return;
+	}
+	
+	/*	CHECK [3]	*/
+	//피킹 지시 상태 row 가 있는가?
+	let hasUpdateTarget = barcodeList.map(item => item.OrderPickingStatus).includes("[20] 피킹지시")
+	if( !(hasUpdateTarget) )
+	{
+		gfnShowSnackBar('error', "".concat(BODY_CONTEXT.literals.DI_ERR_EntryNO, ' : PickingNo'));
+		return;
+	}
+	
+	
+	let chkWOList = sGrid ? sGrid.getCheckedRows() : [];
+	let chkWCList = wGrid ? wGrid.getCheckedRows() : [];
+	
+	let woList = chkWOList.map(item => item.WipOrderNo);     //선택된 행에서 WipOrderNo 만 추출
+	let wcList = chkWCList.map(item => item.WorkCenterCode); //선택된 행에서 WorkCenter 만 추출
+	
+	/*	CHECK [4]	*/
+	if( !(woList.length > 0 && wcList.length > 0) )
+	{
+		gfnShowSnackBar('error', "".concat(BODY_CONTEXT.literals.DI_ERR_EntryNO, ' : WipOrderNo, WorkCenter'));
+		return;
+	}
+	
+	/*	CHECK [5]	*/
+	//2023-09-18, Kim CheolEon :: 상세조회 당시의 WipOrderNo 와, 엑셀 처리시의 선택된 WipOrderNo 가 다를 경우 체크
+	let equal = gfnArrayEqualCheck(woList, dschWipOrderNoList)
+	if( !(equal) )
+	{
+		gfnShowSnackBar('error', "".concat(BODY_CONTEXT.literals.DI_ERR_PickingDetailSearchNotEqual, ' : WipOrderNo'));
+		return;
+	}
+	
+	
+	/* ALL PASS */
+	PickingStatusChangeFrom20To30(woList, wcList);
+}
+
+
+function PickingStatusChangeFrom20To30(_woList, _wcList)
+{	
+	let inputs = {};
+	inputs.EXT_Facility_SC = gFacility  ? gFacility.value : "";
+	inputs.EXT_WipOrderNoListString = _woList.join('∑');
+	inputs.EXT_WorkCenterListString = _wcList.join('∑');
+	
+	//2023-09-08, Kim CheolEon : 마지막 상세조회의 조건으로 전송할 경우, 작업장 핉터링한 내용에 대해 달라지기 때문에 현재 표시된 데이터를 기준으로 요청해야함.
+	//inputs.EXT_SearchConditionJSON = PCKING_BARCODE_CONDITIONS.EXT_SearchConditionJSON;
+	BODY_CONTEXT.callOperation('DIOEM_HV_MM_PICKLIST_EXPORT_OPR', inputs,
+        function(outputs){ 
+			if(outputs.EXT_ResultCode == "S")
+			{
+				gfnShowSnackBar('info', "".concat(BODY_CONTEXT.literals.DI_TITLE_Confirmation, " : ", outputs.EXT_ResultMessage), 'M');
+				fnRowRequest();
+			}
+			else if(outputs.EXT_ResultCode == "W")
+			{
+				gfnShowSnackBar('warning', "".concat(BODY_CONTEXT.literals.DI_TITLE_Confirmation, " : ", outputs.EXT_ResultMessage), 'M');
+				fnRowRequest();
+			}
+			else
+			{
+				gfnShowSnackBar('error', "".concat(BODY_CONTEXT.literals.DI_MNT_IncompleteAlertMessage, " : ", outputs.EXT_ResultMessage), 'M');
+			}
+        },
+        function(message) {
+            console.log("오류발생 : " + message);
+			gfnShowSnackBar('error', message, 'M');
+			return;
+        }
+	);
+}
+
+
+
+
+
+
+// 피킹재생성 버튼 클릭시 :: OEM_MM_PICKING 권한 필요
+function fnRePicking() {
+	if(confirm(BODY_CONTEXT.literals.DI_COL_ConfirmRegeneratePickingOrder)){
+		// 피킹List발행 상태로 수정
+		let inputs      = {};
+		let arr         = new Array();					
+		let aValues     = sGrid.getCheckedRows();
+		let sWipOrderNo = "";
+		
+		//console.log("aValues ::: " + JSON.stringify(aValues));
+		if (aValues.length){
+			for(let val of aValues){
+				if(val.OrderPickingStatus === "[20] 피킹지시" || val.OrderPickingStatus === "[30] 피킹List발행"){
+					arr.push(val.WipOrderNo);
+				}
+			}
+			sWipOrderNo = arr.join(",");
+			//console.log("sWipOrderNo ::: " + sWipOrderNo);
+			
+			inputs.EXT_Facility_SC    = gFacility  ? gFacility.value : "";
+			inputs.EXT_WipOrderNoText = sWipOrderNo;
+			
+			//console.log("피킹재생성 ::: inputs ===> " + JSON.stringify(inputs));
+		    BODY_CONTEXT.callOperation('DIOEM_HV_MM_REPICKING_OPR', inputs,
+		        function(outputs){ 
+					// 그리드 새로고침(재조회)
+					fnRowRequest();
+		        },
+		        function(message) {
+		            console.log("오류발생 : " + message);
+					//alert(message);
+		        });	
+		}else{
+			alert(BODY_CONTEXT.literals.DI_ERR_SELECT_DATA);
+		}
+	}	
+}
+//###############################################################################################################//
+//###############################################################################################################//
+//###############################################################################################################//
+//###############################################################################################################//
+//###############################################################################################################//
+
+
+.ToastUI-SubGroup.Left
+{
+	width: 35%;
+	height: 100%;
+	float: left;
+	margin-right: 1%;
+}
+
+.ToastUI-SubGroup.Middle
+{
+	width: 13%;
+	height: 100%;
+	float: left;
+	margin-right: 1%;
+}
+
+.ToastUI-SubGroup.Right
+{
+	width: 50%;
+	height: 100%;
+	float: left;
+}
+.bgColDarkGray {
+	background-color:#a5a5a5!important;
+}
+
+
+//###############################################################################################################//
+//###############################################################################################################//
+//###############################################################################################################//
+//###############################################################################################################//
+//###############################################################################################################//
+
 <!-- 포커스 흡수기 -->
 <input autofocus="true" style="display:none; width:1px; height:1px;"/>
 
@@ -228,6 +920,10 @@
 	</div>
 </div>
 
+<template>
+{@DI_TITLE_MSG_SearchedNoData}
+</template>
+
 
 <div class="loadingLayer" style="display:none;">
     <div class="loader"></div>
@@ -340,21 +1036,11 @@ $(document).ready(function(){
 	
 </script>
 
-/*
-[Apriso] – changed to "<drive>\Program Files\Dassault Systemes\DELMIA Apriso 2019\WebSite\Portal" in runtime
-[AprisoStyles] – changed to "<drive>\Program Files\Dassault Systemes\DELMIA Apriso 2019\WebSite\Portal\Styles\[CurrentTheme]" in runtime (where [CurrentTheme] represents the theme used by the logged-in user)
-[AprisoScripts] – changed to "<drive>\Program Files\Dassault Systemes\DELMIA Apriso 2019\WebSite\Portal\Scripts" in runtime
-*/
-
-// 2023-05-09, Kim CheolEon :: 폴더 경로 길게 잡으니까 UAT 에서 인식하지 못하여 변경함.
-/*
-<script src="[AprisoScripts]/ACUSTOM/ToastUI/SheetJS/xlsx.full.min.js"></script>
-<script src="[AprisoScripts]/ACUSTOM/ToastUI/tui-date-picker/dist/tui-date-picker.js"></script>
-<script src="[AprisoScripts]/ACUSTOM/ToastUI/tui-pagination/dist/tui-pagination.js"></script>
-<script src="[AprisoScripts]/ACUSTOM/ToastUI/tui-grid/dist/tui-grid.js"></script>
-*/
-
-
+//###############################################################################################################//
+//###############################################################################################################//
+//###############################################################################################################//
+//###############################################################################################################//
+//###############################################################################################################//
 /* ************************************* 외부 Library(JS) 호출 :: START ************************************* */
 
 <script src="[AprisoScripts]/ACUSTOM/ToastUI/xlsx.full.min.js"></script>
@@ -398,12 +1084,24 @@ document.addEventListener('readystatechange', (event) => {
 var CONT_BUTTON_CONFIG   = {};
 var CONT_CONTROLLER_TYPE = {};
 
+
+/*	2023-08-24, Kim CheolEon :: gfnConcurrencyRequest 에서 요청하려는 갯수를 카운팅함.
+	TUI 화면에서 더이상 사용되지 않는 변수
+		var HEADER_COUNT  = Object.keys(TOAST_GRID).length;
+		var ROW_COUNT     = Object.keys(TOAST_GRID).length;
+*/
+var REQ_HEAD_COUNT = 0;
+var REQ_ROW_COUNT  = 0;
+var RES_ROW_CHECK  = [];
+var RES_HEAD_CHECK = [];
+
+
 var CONT_COMMON_GRID     = {
 	  ComMaterialList : gfnToastGrid('ComMaterialList') 
 	, ComPartnerList : gfnToastGrid('ComPartnerList')
 	, ComInventoryBalanceList : gfnToastGrid('ComInventoryBalanceList')
 	, ComInventoryMasterList : gfnToastGrid('ComInventoryMasterList', 4, null)
-	, ComMaterialMasterList : gfnToastGrid('ComMaterialMasterList', 6, null)
+	, ComMaterialMasterList : gfnToastGrid('ComMaterialMasterList', 2, null)
 	, ComInventoryPOList : gfnToastGrid('ComInventoryPOList', null, "rowNum")
 };
 
@@ -413,11 +1111,12 @@ var CONT_ROW_COUNT    = Object.keys(CONT_COMMON_GRID).length;
 
 var CONT_TUIGRID = tui.Grid;
 	CONT_TUIGRID.applyTheme('striped');
+	CONT_TUIGRID.setLanguage('ko');
 	
 var CONT_BOTTOM_LAYER_SHOW = false;
 
 var CONT_SNACK_BAR;
-var CONT_SNACK_BAR_MAX = 5;
+var CONT_SNACK_BAR_MAX = 10;
 
 var gFacility           = document.querySelector('.Control.fc_EXT_Facility_SC select');
 var gControllerType     = document.querySelector('.Control.fc_EXT_ControllerType_SC select');
@@ -426,9 +1125,11 @@ var gPurchaseType       = document.querySelector('.Control.fc_EXT_PurchaseType_S
 var gInspectionType     = document.querySelector('.Control.fc_EXT_InspectionType_SC select');
 var gProcurementType    = document.querySelector('.Control.fc_EXT_ProcurementType_SC select');
 var gSearchType         = document.querySelector('.Control.fc_EXT_SearchType_SC select');
+var gDateSearchType     = document.querySelector('.Control.fc_EXT_DateSearchType_SC select');
 var gRequiredQtyType    = document.querySelector('.Control.fc_EXT_RequiredQtyType_SC select');
 var gProductSupplyType  = document.querySelector('.Control.fc_EXT_ProductSupplyType_SC select');
 var gDirectDeliveryType = document.querySelector('.Control.fc_EXT_DirectDeliveryType_SC select');
+var gInOutSearchType    = document.querySelector('.Control.fc_EXT_InOutSearchType_SC select');
 var gPurchaseDay        = document.querySelector('.Control.fc_EXT_PurchaseDay_SC select');
 var gPoErpsendDay       = document.querySelector('.Control.fc_EXT_PoErpsendDay_SC select');
 var gWarehouse          = document.querySelector('.Control.fc_EXT_Warehouse_SC select');
@@ -447,6 +1148,7 @@ var gSelfSupport        = document.querySelector('.Control.fc_EXT_SelfSupport_SC
 var gDepartment         = document.querySelector('.Control.fc_EXT_Department_SC select');
 var gReasonCode         = document.querySelector('.Control.fc_EXT_ReasonCode_SC select');
 var gRequestStatus      = document.querySelector('.Control.fc_EXT_RequestStatus_SC select');
+var gERPReturnStatus    = document.querySelector('.Control.fc_EXT_ERPReturnStatus_SC select');
 
 var gProductNo          = document.querySelector('.Control.fc_EXT_ProductNo_SC input');
 var gPartnerNo          = document.querySelector('.Control.fc_EXT_PartnerNo_SC input');
@@ -460,17 +1162,21 @@ var gToSerialNo			= document.querySelector('.Control.fc_EXT_ToSerialNo_SC input'
 var gFromDate           = document.querySelector('.Control.fc_EXT_FromDate_SC input');
 var gToDate             = document.querySelector('.Control.fc_EXT_ToDate_SC input');
 var gFixDate            = document.querySelector('.Control.fc_EXT_FixDate_SC input');
+var gTargetMonth        = document.querySelector('.Control.fc_EXT_TargetMonth_SC input');
+var gYearMonth          = document.querySelector('.Control.fc_EXT_YearMonth_SC input');
 
 var gSAPDiffType        = document.querySelector('.Control.fc_EXT_SAPDiffType_SC input:checked');
 
 var gWipOrderNoText     = document.querySelector('.Control.fc_EXT_WipOrderNoText_SC textarea');
 var gPickingNoText      = document.querySelector('.Control.fc_EXT_PickingNoText_SC textarea');
 var gProductNoText      = document.querySelector('.Control.fc_EXT_ProductNoText_SC textarea');
-var gOrderNoText        = document.querySelector('.Control.fc_EXT_OrderNo_SC textarea');
+var gOrderNoText        = document.querySelector('.Control.fc_EXT_OrderNoText_SC textarea');
 
 
 var gPurchaseOrderNo    = document.querySelector('.Control.fc_EXT_PurchaseOrderNo_SC input');
 var gDeliveryReportNo   = document.querySelector('.Control.fc_EXT_DeliveryReportNo_SC input');
+var gDeliveryDocumentNo = document.querySelector('.Control.fc_EXT_DeliveryDocumentNo_SC input');
+var gBarCodeNo          = document.querySelector('.Control.fc_EXT_BarCodeNo_SC input');
 
 var gPOSupplierExceptCheck   = document.querySelector('.Control.fc_EXT_POSupplierExceptCheck_SC input');
 var gScheduledInclusionCheck = document.querySelector('.Control.fc_EXT_ScheduledInclusionCheck_SC input');
@@ -483,6 +1189,10 @@ var gBackLogCheck            = document.querySelector('.Control.fc_EXT_BackLogCh
 var gSubcontractCheck        = document.querySelector('.Control.fc_EXT_SubcontractCheck_SC input');
 var gPurchaseAgencyCheck     = document.querySelector('.Control.fc_EXT_PurchaseAgencyCheck_SC input');
 var gPartnerStockCheck       = document.querySelector('.Control.fc_EXT_PartnerStockCheck_SC input');
+var gUnFinishCheck           = document.querySelector('.Control.fc_EXT_UnFinishCheck_SC input');
+var gFromDateAfterCheck      = document.querySelector('.Control.fc_EXT_FromDateAfterCheck_SC input');
+var gCompleteCheck           = document.querySelector('.Control.fc_EXT_CompleteCheck_SC input');
+var gBarcode
 
 
 var CONT_RESIZE_DELAY = 150;
@@ -508,7 +1218,8 @@ function gfnShowCustomDialog(_titleText, _bodyText, _color, _confirmText, _confi
 	//팝업제목 지정
 	$( ".InitCustomModalDialog .ui-dialog-titlebar" ).text(_titleText)
 	//팝업 주의문구 지정
-	$( ".InitCustomModalDialog .ui-dialog-content .Message" ).text(_bodyText)
+	//$( ".InitCustomModalDialog .ui-dialog-content .Message" ).text(_bodyText)
+	$( ".InitCustomModalDialog .ui-dialog-content .Message" ).html(_bodyText)
 	
 	//주의 문구 시 컬러 추가할 것 (없으면 black)
 	if(!_color) 
@@ -566,6 +1277,7 @@ window.addEventListener('resize', function(){
 	
 function gfnOEMResizeActionRelease()
 {
+	//console.log('gfnOEMResizeActionRelease');
 	//TUI Grid 미적용 없는 화면에서도 동작할 수 있도록 예외처리
 	if(typeof(TOAST_GRID) != 'undefined')
 	{
@@ -607,6 +1319,12 @@ function gfnDropDownList(oSelect, aInParams, sAddAttribute){
 			if(oSelect[0] == $(gControllerType)[0])
 			{
 				gfnSetControllerType();
+			}
+			
+			//2023-08-16, Kim CheolEon :: 입/불출 이 초기값
+			if(oSelect[0] == $(gInOutSearchType)[0])
+			{
+				$(gInOutSearchType).val("GRnRR").prop("selected", true);
 			}
         },
         function(message) {
@@ -696,7 +1414,7 @@ function gfnOEMSetInventoryPOInfo(_data)
 
 
 // Toast Grid 데이터 요청 
-function gfnRequestGridData(params, successCallback, optFuntion, context){
+function gfnRequestGridData(params, successCallback, optFunction, context){
     var inputs = {};
 	inputs.EXT_RequestType         = params.EXT_RequestType;
 	inputs.EXT_SearchConditionJSON = params.EXT_SearchConditionJSON;
@@ -708,88 +1426,167 @@ function gfnRequestGridData(params, successCallback, optFuntion, context){
 	context = context ? context : CONT_CONTEXT;
 	
 	context.callOperation('DIOEM_HV_MM_GET_TOAST_UI_GRID_DATA', inputs,
-						      ((outputs) => { successCallback(outputs, gridID, optFuntion) }),
+						      ((outputs) => { successCallback(outputs, gridID, optFunction) }),
 						      ((message) => { gfnErrorCallback(message) })       );
 }
 
 //[화면] Toast Grid Header 셋팅 
-function gfnSetGridHeader(_data, _gridID){
+function gfnSetGridHeader(_data, _gridID, optFunction){
 	let data = _data;
 	let code = _gridID;
 	
-	(--HEADER_COUNT);
-	//console.log("Header _data ::: " + JSON.stringify(_data));
-	//console.log("Header _gridID ::: " + _gridID);
+	(--REQ_HEAD_COUNT);
+
 	if(data && code){
 		if(data.EXT_ResultJSONData){
+		
+			RES_HEAD_CHECK.push({
+				 GridID: _gridID
+				,Result: 'Y'
+			});
+			
 			if(TOAST_GRID && TOAST_GRID[code]){
-				TOAST_GRID[code].setColumns(JSON.parse(data.EXT_ResultJSONData));
+				let parse = JSON.parse(data.EXT_ResultJSONData)
+				
+				//2023-08-21, Kim CheolEon 포맷터 함수를 통해 포맷팅을 해도, filter type : number 에 대해서 찾아내지를 못함. (문자열이 되기때문으로 추측)
+				for(let [i, obj] of parse.entries())
+				{
+				    if(parse[i].filter.type === "number")
+				    {
+				        parse[i].formatter = function(row){
+				            //return row.value.toLocaleString();
+							return row.value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+				        }
+				    }
+				}
+				for(let [i, obj] of parse.entries())
+				{
+				    if(parse[i].filter.type === "select")
+				    {
+				        parse[i].operator = 'OR';
+				    }
+				}
+
+				TOAST_GRID[code].setColumns(parse);
 			}
+			// 2023-08-08 이정원 추가
+			//if("function" === typeof(optFunction)){
+			//	optFunction(TOAST_GRID[code], data.EXT_ResultJSONData);
+			//}
+		}
+		else
+		{
+			RES_HEAD_CHECK.push({
+				 GridID: _gridID
+				,Result: 'N'
+			});
 		}
 	}
 	
-	if(HEADER_COUNT <= 0){
+	if(REQ_HEAD_COUNT <= 0){
+		//따로 헤더는 체크 항목 안넣었음
 		$('.loadingLayer').hide();
-		HEADER_COUNT = Object.keys(TOAST_GRID).length;
 	}
-
+	
+	// 2023-09-14, Kim CheolEon :: 수행시작 위치 이동
+	// 복잡한 처리, 시간이 오래 걸리는 처리일 경우 로딩이 먼저 없어지는 경우가 생김.
+	// 별개의 작업으로 구별하기위해 마지막에 처리
+	if("function" === typeof(optFunction))
+	{
+		if(data && code)
+		{
+			if(data.EXT_ResultJSONData)
+			{
+				if(TOAST_GRID && TOAST_GRID[code])
+				{
+					optFunction(TOAST_GRID[code], data.EXT_ResultJSONData);
+				}
+			}
+		}
+	}
 }
 
 //[화면] Toast Grid Data 셋팅 
-function gfnSetGridRow(_data, _gridID, optFuntion){
+function gfnSetGridRow(_data, _gridID, optFunction){
 	let data = _data;
 	let code = _gridID;
+
+	(--REQ_ROW_COUNT);
 	
-	(--ROW_COUNT);
 	//console.log("gfnSetGridRow ::: ["+_gridID+"]_data ::: " + JSON.stringify(_data));
 	if(data && code){
 		if(data.EXT_ResultJSONData){
-			if(TOAST_GRID && TOAST_GRID[code]){	
-				TOAST_GRID[code].resetData(JSON.parse(data.EXT_ResultJSONData));
-				TOAST_GRID[code].refreshLayout();
-				if("function" === typeof(optFuntion)){
-					optFuntion(TOAST_GRID[code], data.EXT_ResultJSONData);
+			
+			RES_ROW_CHECK.push({
+				 GridID: _gridID
+				,Result: 'Y'
+			});
+			
+			if(TOAST_GRID && TOAST_GRID[code]){
+				
+				let parse = JSON.parse(data.EXT_ResultJSONData);
+			
+				TOAST_GRID[code].resetData(parse);
+				TOAST_GRID[code].resetOriginData();
+				
+				if(parse.length > 0)
+				{
+					if(parse[0].SortOrder)
+					{
+						TOAST_GRID[code].sort('SortOrder', true, true);
+					}
 				}
-				/*
-				if("function" === typeof(optFuntion)){
-					optFuntion(TOAST_GRID[code], data.EXT_ResultJSONData);
-				}else{
-					TOAST_GRID[code].resetData(JSON.parse(data.EXT_ResultJSONData));
-					TOAST_GRID[code].refreshLayout();
-				}
-				*/
+				
+				
+				//TOAST_GRID[code].refreshLayout();
+				//if("function" === typeof(optFunction)){
+				//	optFunction(TOAST_GRID[code], data.EXT_ResultJSONData);
+				//}
 			}
 		}else{
-			//console.log("::::: NO DATA :::::" + JSON.stringify(_data));
-			//alert('NO DATA');
-			//빈 데이터 삽입
-			//TOAST_GRID[code].resetData([{}]);
-			TOAST_GRID[code].resetData([]);
+		
+			RES_ROW_CHECK.push({
+				 GridID: _gridID
+				,Result: 'N'
+			});
+			
+			if(TOAST_GRID && TOAST_GRID[code]){	
+				TOAST_GRID[code].resetData([]);
+				TOAST_GRID[code].resetOriginData();
+			}
 		}
 	}
 	
-	if(ROW_COUNT <= 0){
+	if(REQ_ROW_COUNT <= 0){
 		$('.loadingLayer').hide();
-		ROW_COUNT = Object.keys(TOAST_GRID).length;
 		
-		let list = Object.keys(TOAST_GRID);
-		let zeroCnt = 0;
-		if(list.length > 0)
+		let RES_COUNT = 0;
+		RES_ROW_CHECK.forEach(item => {
+			if('Y' === item.Result){ ++RES_COUNT; }
+		})
+		
+		if(RES_COUNT == 0)
 		{
-			list.forEach(item => {
-				//if(TOAST_GRID[item].getData().length === 0) ++zeroCnt;
-				//2023-07-06, Kim CheolEon :: setData 가 완성되기 전에 getData 하느라 length가 0 이 되는 상황이 발생 (1만건 정도의 데이터)
-				//수신받은 JSON데이터가 null 이거나 '' 일때 zeroCnt 증가
-				if(!data.EXT_ResultJSONData || data.EXT_ResultJSONData == '') ++zeroCnt;
-			})
-			if(zeroCnt > 0)
-			{
-				//alert('조회된 Data가 없습니다.');
-				//console.log('조회된 Data가 없습니다.') // 임시조치
-				gfnShowSnackBar("warning", '조회된 Data가 없습니다.');
-			}
+			gfnShowSnackBar("warning", CONT_CONTEXT.literals.DI_TITLE_MSG_SearchedNoData);
 		}
 	}
+	
+	// 2023-09-14, Kim CheolEon :: 수행시작 위치 이동
+	// 복잡한 처리, 시간이 오래 걸리는 처리일 경우 로딩이 먼저 없어지는 경우가 생김.
+	// 별개의 작업으로 구별하기위해 마지막에 처리
+	if("function" === typeof(optFunction))
+	{
+		if(data && code)
+		{
+			if(data.EXT_ResultJSONData)
+			{
+				if(TOAST_GRID && TOAST_GRID[code])
+				{
+					optFunction(TOAST_GRID[code], data.EXT_ResultJSONData);
+				}
+			}
+		}
+	}	
 }
 
 // [화면] 조회조건 셋팅
@@ -806,30 +1603,33 @@ function gfnSetSearchConditions(reqType, gridID){
 	
     if(gFacility)                 sub.Facility                = gFacility                 ? gFacility.value        : "";
     if(gControllerType)           sub.ControllerType          = gControllerType           ? gControllerType.value  : "";
-    if(gFacility)                 sub.ControllerCode          = gControllerCode           ? gControllerCode.value  : "";
-    if(gControllerType)           sub.PurchaseType            = gPurchaseType             ? gPurchaseType.value    : "";
-    if(gControllerCode)           sub.InspectionType          = gInspectionType           ? gInspectionType.value  : "";
-    if(gPurchaseType)             sub.ProcurementType         = gProcurementType          ? gProcurementType.value : "";
-    if(gInspectionType)           sub.SearchType              = gSearchType               ? gSearchType.value      : "";
-    if(gProcurementType)          sub.RequiredQtyType         = gRequiredQtyType          ? gRequiredQtyType.value : "";
-    if(gSearchType)               sub.PurchaseDay             = gPurchaseDay              ? gPurchaseDay.value     : "";
-    if(gRequiredQtyType)          sub.PoErpsendDay            = gPoErpsendDay             ? gPoErpsendDay.value    : "";
-    if(gPurchaseDay)              sub.Warehouse               = gWarehouse                ? gWarehouse.value       : "";
-    if(gPoErpsendDay)             sub.WarehouseCode           = gWarehouseCode            ? gWarehouseCode.value   : "";
-    if(gWarehouse)                sub.WorkCenter              = gWorkCenter               ? gWorkCenter.value      : "";
-    if(gWarehouseCode)            sub.PickingSearchType       = gPickingSearchType        ? gPickingSearchType.value : "";
-    if(gWorkCenter)               sub.PickingStatus           = gPickingStatus            ? gPickingStatus.value     : "";    
-    if(gPickingSearchType)        sub.QuotaStatus             = gQuotaStatus              ? gQuotaStatus.value       : "";    
-    if(gPickingStatus)            sub.JobCode                 = gJobCode                  ? gJobCode.value           : "";
-    if(gQuotaStatus)              sub.POProcessStatus         = gPOProcessStatus          ? gPOProcessStatus.value   : "";
-    if(gJobCode)                  sub.POResultStatus          = gPOResultStatus           ? gPOResultStatus.value    : "";
-    if(gPOProcessStatus)          sub.HDDirectDeliveryType    = gHDDirectDeliveryType     ? gHDDirectDeliveryType.value : "";
-    if(gPOResultStatus)           sub.ApprovalStatus          = gApprovalStatus           ? gApprovalStatus.value       : "";
+    if(gControllerCode)           sub.ControllerCode          = gControllerCode           ? gControllerCode.value  : "";
+    if(gPurchaseType)             sub.PurchaseType            = gPurchaseType             ? gPurchaseType.value    : "";
+    if(gInspectionType)           sub.InspectionType          = gInspectionType           ? gInspectionType.value  : "";
+    if(gProcurementType)          sub.ProcurementType         = gProcurementType          ? gProcurementType.value : "";
+    if(gSearchType)               sub.SearchType              = gSearchType               ? gSearchType.value      : "";
+	if(gDateSearchType)           sub.DateSearchType          = gDateSearchType           ? gDateSearchType.value  : "";
+    if(gRequiredQtyType)          sub.RequiredQtyType         = gRequiredQtyType          ? gRequiredQtyType.value : "";
+    if(gPurchaseDay)              sub.PurchaseDay             = gPurchaseDay              ? gPurchaseDay.value     : "";
+	if(gSearchType)               sub.SearchType              = gSearchType               ? gSearchType.value      : "";
+    if(gPoErpsendDay)             sub.PoErpsendDay            = gPoErpsendDay             ? gPoErpsendDay.value    : "";
+    if(gWarehouse)                sub.Warehouse               = gWarehouse                ? gWarehouse.value       : "";
+    if(gWarehouseCode)            sub.WarehouseCode           = gWarehouseCode            ? gWarehouseCode.value   : "";
+    if(gWorkCenter)               sub.WorkCenter              = gWorkCenter               ? gWorkCenter.value      : "";
+    if(gPickingSearchType)        sub.PickingSearchType       = gPickingSearchType        ? gPickingSearchType.value : "";
+    if(gPickingStatus)            sub.PickingStatus           = gPickingStatus            ? gPickingStatus.value     : "";    
+    if(gQuotaStatus)              sub.QuotaStatus             = gQuotaStatus              ? gQuotaStatus.value       : "";    
+    if(gJobCode)                  sub.JobCode                 = gJobCode                  ? gJobCode.value           : "";
+    if(gPOProcessStatus)          sub.POProcessStatus         = gPOProcessStatus          ? gPOProcessStatus.value   : "";
+    if(gPOResultStatus)           sub.POResultStatus          = gPOResultStatus           ? gPOResultStatus.value    : "";
+    if(gHDDirectDeliveryType)     sub.HDDirectDeliveryType    = gHDDirectDeliveryType     ? gHDDirectDeliveryType.value : "";
+    if(gApprovalStatus)           sub.ApprovalStatus          = gApprovalStatus           ? gApprovalStatus.value       : "";
     if(gMaterialType)             sub.MaterialType            = gMaterialType             ? gMaterialType.value         : "";
     if(gSelfSupport)              sub.SelfSupport             = gSelfSupport              ? gSelfSupport.value          : "";
     if(gDepartment)               sub.Department              = gDepartment               ? gDepartment.value           : "";
     if(gReasonCode)               sub.ReasonCode              = gReasonCode               ? gReasonCode.value           : "";
     if(gRequestStatus)            sub.RequestStatus           = gRequestStatus            ? gRequestStatus.value        : "";
+    if(gERPReturnStatus)          sub.ERPReturnStatus         = gERPReturnStatus          ? gERPReturnStatus.value      : "";
                 
     if(gProductNo)                sub.ProductNo               = gProductNo                ? gProductNo.value  : "";
     if(gPartnerNo)                sub.PartnerNo               = gPartnerNo                ? gPartnerNo.value  : "";
@@ -859,14 +1659,21 @@ function gfnSetSearchConditions(reqType, gridID){
 	if(gSubcontractCheck)         sub.SubcontractCheck        = gSubcontractCheck         ? Number(gSubcontractCheck.checked)        : 0;
     if(gPurchaseAgencyCheck)      sub.PurchaseAgencyCheck     = gPurchaseAgencyCheck      ? Number(gPurchaseAgencyCheck.checked)     : 0;
 	if(gPartnerStockCheck)        sub.PartnerStockCheck       = gPartnerStockCheck        ? Number(gPartnerStockCheck.checked)       : 0;
+	if(gUnFinishCheck)            sub.UnFinishCheck           = gUnFinishCheck            ? Number(gUnFinishCheck.checked)           : 0;
+	if(gFromDateAfterCheck)       sub.FromDateAfterCheck      = gFromDateAfterCheck       ? Number(gFromDateAfterCheck.checked)      : 0;
+	if(gCompleteCheck)            sub.CompleteCheck           = gCompleteCheck            ? Number(gCompleteCheck.checked)           : 0;
     
-    if(gPurchaseOrderNo)          sub.PurchaseOrderNo         = gPurchaseOrderNo          ? gPurchaseOrderNo.value : ""; 
-    if(gDeliveryReportNo)         sub.DeliveryReportNo        = gDeliveryReportNo         ? gDeliveryReportNo.value : "";
+    if(gPurchaseOrderNo)          sub.PurchaseOrderNo         = gPurchaseOrderNo          ? gPurchaseOrderNo.value    : ""; 
+    if(gDeliveryReportNo)         sub.DeliveryReportNo        = gDeliveryReportNo         ? gDeliveryReportNo.value   : "";
+    if(gDeliveryDocumentNo)       sub.DeliveryDocumentNo      = gDeliveryDocumentNo       ? gDeliveryDocumentNo.value : "";
+	if(gBarCodeNo)                sub.BarCodeNo               = gBarCodeNo                ? gBarCodeNo.value : "";
     
     if(gFromDate)                 sub.FromDate                = gFromDate                 ? gFromDate.value : "1900-01-01"; // 암묵적 타입캐스팅 처리
     if(gToDate)                   sub.ToDate                  = gToDate                   ? gToDate.value   : "1900-01-01"; // 암묵적 타입캐스팅 처리
     if(gFixDate)                  sub.FixDate                 = gFixDate                  ? gFixDate.value  : "1900-01-01"; // 암묵적 타입캐스팅 처리
-    
+    if(gTargetMonth)              sub.TargetMonth             = gTargetMonth              ? gTargetMonth.value : "";
+	if(gYearMonth)                sub.YearMonth               = gYearMonth                ? gYearMonth.value   : "";
+	
 	if(gSAPDiffType)              sub.SAPDiffType             = gSAPDiffType              ? gSAPDiffType.value : "";
 	
 	params.EXT_SearchConditionJSON = JSON.stringify(sub);
@@ -882,19 +1689,38 @@ async function gfnConcurrencyRequest(objList, reqType){
 	{
 		if(objList.length > 0)
 		{
+			RES_ROW_CHECK  = [];
+			RES_HEAD_CHECK = [];
+			
 			$('.loadingLayer').show();	
+			
+			//요청 처리 시작하는 리스트 갯수 저장 => 차감하여 로딩바 종료 시점 계산.
+			//objList.filter(item => item === undefined)
+			
+			//여기서의 undefined 는, 화면에서 gfnConcurrencyRequest 의 리스트를 담을 때 담겨진 gfnRequestGridData 비동기 함수임.
+			//length (갯수) 를 가져가려는 이유는, 화면에서 데이터 요청 시에 여러개의 탭(버튼) 을 동시에 요청하지 않고 하나씩만 요청할 때가 있어서임.
+			/*
+				화면에 Toast Grid 는 여러개인데, 한번에 여러개의 Grid를 요청하는 예시 :: DIOEM_HV_MM_UNPAID_GRID_VIEW
+				화면에 Toast Grid 는 여러개인데, 활성화된 탭만 보내는 예시 :: DIOEM_HV_MM_IN_OUT_STATUS_GRID_VIEW
+			*/
+			let reqObjCount = objList.filter(item => (item === undefined && item !== null)).length;
 			
 			if("HEADER" === reqType)
 			{
-				const comHeadRequest = await Promise.allSettled(objList);
+				//REQ_HEAD_COUNT = objList.length;
+				REQ_HEAD_COUNT = reqObjCount;
 			}
 			else if("ROW" === reqType)
 			{
-				//console.log("gfnConcurrencyRequest :::::" + JSON.stringify(objList));
-				const comHeadRequest = await Promise.allSettled(objList);
+				//REQ_ROW_COUNT = objList.length;
+				REQ_ROW_COUNT = reqObjCount;
 			}
+			
+			const request = await Promise.allSettled(objList);
+			
+			return request;
 		}
-	}	
+	}
 }
 
 function gfnSearchedName(context, params){
@@ -964,18 +1790,7 @@ function gfnOEMInitSelectChangeEvent(){
 			}
 			//Facility 가 바뀌면 ControllerCode 는 무조건 휘발되어야 이전 데이터가 남지 않음.
 			!gControllerCode     ? null : gfnSelectBoxClear( $(gControllerCode       ) );
-			//if(gControllerCode){
-			//	gfnDropDownList( $(gControllerCode)
-			//               , (function(){
-			//			   		setParams = JSON.parse(JSON.stringify(params));
-			//					setParams.EXT_Facility_SC  = gFacility.value;
-			//					setParams.EXT_OEMIncludeCodeYN_SC = "Y";
-			//					setParams.EXT_Module_SC    = "CO";
-			//					setParams.EXT_GroupCode_SC = !gControllerType ? null : gControllerType.value;
-			//			   		return setParams 
-			//			     }())
-			//			   , null);
-			//}
+
 			if(gPurchaseType){
 				gfnDropDownList( $(gPurchaseType)
 			               , (function(){
@@ -1266,8 +2081,28 @@ function gfnOEMInitSelectChangeEvent(){
 						     }())
 						   , null);
 			}
-
-			//gfnSetControllerType();
+			if(gInOutSearchType){
+				gfnDropDownList( $(gInOutSearchType)
+			               , (function(){
+						   		setParams = JSON.parse(JSON.stringify(params));
+								setParams.EXT_Facility_SC  = gFacility.value;
+								setParams.EXT_Module_SC    = "LD";
+								setParams.EXT_GroupCode_SC = "OEMInOutStatus";
+						   		return setParams 
+						     }())
+						   , null);
+			}
+			if(gERPReturnStatus){
+				gfnDropDownList( $(gERPReturnStatus)
+			               , (function(){
+						   		setParams = JSON.parse(JSON.stringify(params));
+								setParams.EXT_Facility_SC  = gFacility.value;
+								setParams.EXT_Module_SC    = "LD";
+								setParams.EXT_GroupCode_SC = "OEMERPReturnStatus";
+						   		return setParams 
+						     }())
+						   , null);
+			}
 		}
 		//Facility value 없을 시 전부 초기화
 		else
@@ -1298,7 +2133,9 @@ function gfnOEMInitSelectChangeEvent(){
 			!gSelfSupport          ? null : gfnSelectBoxClear( $(gSelfSupport          ) );		
 			!gDepartment           ? null : gfnSelectBoxClear( $(gDepartment           ) );		
 			!gReasonCode           ? null : gfnSelectBoxClear( $(gReasonCode           ) );	
-			!gRequestStatus        ? null : gfnSelectBoxClear( $(gRequestStatus        ) );	
+			!gRequestStatus        ? null : gfnSelectBoxClear( $(gRequestStatus        ) );
+			!gInOutSearchType      ? null : gfnSelectBoxClear( $(gInOutSearchType      ) );
+			!gERPReturnStatus      ? null : gfnSelectBoxClear( $(gERPReturnStatus      ) );
 		}
 	})
 	
@@ -1467,9 +2304,63 @@ function gfnTuiSwitcingViewGrid(tuiObjGroup, tuiTagGroup, gridID, button)
 }
 
 
+/* 
+	2023-07-07 Kim CheolEon :: 헤더 렌더링 함수. Tui 메뉴얼에는 class(ES6) 로 선언되어있으나, 레거시 함수(ES5)로 변환
+	https://nhn.github.io/tui.grid/latest/tutorial-example11-row-headers
+*/
+function ToastgridHeaderRender(props)
+{
+	const { grid, rowKey } = props;
+	const gridKey = grid.el.id;
+	
+	const label = document.createElement('label');
+	label.className = 'checkbox cust-container';
+	label.setAttribute('for', String(rowKey + gridKey));
+	
+	const hiddenInput = document.createElement('input');
+    hiddenInput.className = 'hidden-input';
+    hiddenInput.id = String(rowKey);
+
+    const customInput = document.createElement('span');
+    customInput.className = 'custom-input cust-checkmark';
+
+    label.appendChild(hiddenInput);
+    label.appendChild(customInput);
+
+    hiddenInput.type = 'checkbox';
+    label.addEventListener('click', (ev) => {
+      ev.preventDefault();
+
+      if (ev.shiftKey) {
+        grid[!hiddenInput.checked ? 'checkBetween' : 'uncheckBetween'](rowKey);
+        return;
+      }
+
+      grid[!hiddenInput.checked ? 'check' : 'uncheck'](rowKey);
+    });
+
+    this.el = label;
+
+    this.render(props);
+}
+ToastgridHeaderRender.prototype.getElement = function()
+{
+	return this.el;
+}
+ToastgridHeaderRender.prototype.render = function(props)
+{
+	const hiddenInput = this.el.querySelector('.hidden-input');
+    const checked = Boolean(props.value);
+
+    hiddenInput.checked = checked;
+}
+
+
+
 function gfnToastGrid(domID, frzCount, rowHeader, summary)
 {
 	let dom = document.getElementById(domID);
+	
 	if(!dom)
 	{
 		return null;
@@ -1479,14 +2370,12 @@ function gfnToastGrid(domID, frzCount, rowHeader, summary)
 		let headers = null
 		if("checkbox" === rowHeader)
 		{
-			//커스텀렌더러에 대해 필요할 경우 학습 필요.
+			// 2023-07-08, Kim CheolEon, 커스텀렌더러 학습하여 적용함. Grid 를 동시에 2개 이상 깔아두는 케이스를 위해서 체크박스가 Grid를 구별할 수 있도록 domID(Grid이름) 를 덧붙임.
 			headers = [{  type: 'checkbox',
-				          /*header: "".concat(
-				        '<label for="all-checkbox" class="checkbox">'
-				            ,'<input type="checkbox" id="all-checkbox" class="hidden-input" name="_checked" />'
-				            ,'<span class="custom-input"></span>'
-				        ,'</label>'
-						)*/  
+						  header: '<label for="all-checkbox' + domID + '" class="checkbox cust-container"><input type="checkbox" id="all-checkbox' + domID + '" class="hidden-input" name="_checked" /><span class="custom-input cust-checkmark"></span></label>',
+						  renderer: {
+						  	type: ToastgridHeaderRender
+						  }
 				    }]
 		}
 		else if("rowNum" === rowHeader)
@@ -1525,10 +2414,13 @@ function gfnToastGrid(domID, frzCount, rowHeader, summary)
 		    	frozenBorderWidth: 3
 		    },
 			//contextMenu: ({ rowKey, columnName }) => (
-			contextMenu: function( { rowKey, columnName } ){
-				return gfnToastGridCallContext(rowKey, columnName, domID)
-			},
-		    columns: [{}]
+			//contextMenu: function( { rowKey, columnName } ){
+			//	return gfnToastGridCallContext(rowKey, columnName, domID)
+			//},
+			contextMenu: null,
+			useClientSort: true,
+		    columns: [{}],
+			
 		}
 		/* ================================================ */
 
@@ -1539,6 +2431,17 @@ function gfnToastGrid(domID, frzCount, rowHeader, summary)
 		
 		
 		let newGrid = new tui.Grid(gridObj)
+		
+		//2023-08-21, Kim CheolEon :: 필터 설정 시 x축 스크롤이 초기화되어, 변경한 필터로 스크롤 옮겨가도록 보정
+		//newGrid.on('afterFilter', (evt) => {
+		//	console.log(evt);
+		//	evt.instance.focus(0, evt.columnName, true);
+		//});
+		
+		//newGrid.on('onGridUpdated', function(evt){
+		//	evt.instance.refreshLayout();
+		//})
+		
 		
 		//if(rowHeader == 'checkbox')
 		//{
@@ -1564,7 +2467,6 @@ function gfnToastGrid(domID, frzCount, rowHeader, summary)
 		//		}
 		//	})
 		//}
-		
 		
 		return newGrid;
 	}
@@ -1634,9 +2536,6 @@ function gfnToastGridContnext_2 (rowKey, columnName)
 
 
 
-
-
-
 // 숫자 콤마 처리
 function gfnNumComma(value){
     let aValue;
@@ -1684,9 +2583,6 @@ function gfnToastUIRefreshLayout(gridObj)
 
 
 
-
-
-
 function gfnBottomLayerReady(buttonConfig)
 {
 	//2023-05-16, KimCheolEon : 활성화 버튼 갯수가 1건 이상일 때, 하단 BOTTOM 에 style 지정
@@ -1717,7 +2613,8 @@ function gfnBottomLayerFolding(folding)
 	if(!folding)
 	{
 		CONT_BOTTOM_LAYER_SHOW = true;
-		document.querySelector('#panel_BOTTOM').style.height = '70%';
+		//document.querySelector('#panel_BOTTOM').style.height = '70%';
+		document.querySelector('#panel_BOTTOM').style.height = '60%';
 		
 		
 		gfnToastUIRefreshLayout(CONT_COMMON_GRID);
@@ -1890,7 +2787,7 @@ function gfnSetComGridHeader(_data, _gridID){
 	}
 }
 //[공통] Toast Grid Data 셋팅 
-function gfnSetComGridRow(_data, _gridID, optFuntion){
+function gfnSetComGridRow(_data, _gridID, optFunction){
 	let data = _data;
 	let code = _gridID;
 	
@@ -1899,10 +2796,11 @@ function gfnSetComGridRow(_data, _gridID, optFuntion){
 	if(data && code){
 		if(data.EXT_ResultJSONData){
 			if(CONT_COMMON_GRID && CONT_COMMON_GRID[code]){			
-				if("function" === typeof(optFuntion)){
-					optFuntion(CONT_COMMON_GRID[code], data.EXT_ResultJSONData);
+				if("function" === typeof(optFunction)){
+					optFunction(CONT_COMMON_GRID[code], data.EXT_ResultJSONData);
 				}else{
 					CONT_COMMON_GRID[code].resetData(JSON.parse(data.EXT_ResultJSONData));
+					CONT_COMMON_GRID[code].resetOriginData();
 				}
 			}
 		}else{
@@ -1911,6 +2809,7 @@ function gfnSetComGridRow(_data, _gridID, optFuntion){
 			//빈 데이터 삽입
 			//CONT_COMMON_GRID[code].resetData([{}]);
 			CONT_COMMON_GRID[code].resetData([]);
+			CONT_COMMON_GRID[code].resetOriginData();
 		}
 	}
 	
@@ -2044,11 +2943,12 @@ function gfnSetControllerType(){
 	//}
 	
 	let type = gControllerType;
-	let code = gControllerCode;
+	//let code = gControllerCode;
 	let objValues = Object.values(CONT_CONTROLLER_TYPE);
 	
 	// type, code DOM 이 존재하고 CONTROLLER_TYPE 의 value 가 true 가 존재할 경우 수행 시작
-	if(type && code && objValues.indexOf(true) > -1)
+	//if(type && code && objValues.indexOf(true) > -1)
+	if(type && objValues.indexOf(true) > -1)
 	{
 		let objKeys = Object.keys(CONT_CONTROLLER_TYPE);
 		
@@ -2123,7 +3023,7 @@ function gfnSnackBarInit()
 		let copy = document.importNode(initTemp.content, true);
 		
 		let copyRoot = copy.querySelector('#SnackBarViewFrame');
-		copyRoot.setAttribute("max", CONT_SNACK_BAR_MAX);
+		//copyRoot.setAttribute("max", CONT_SNACK_BAR_MAX);
 		
 		portal.appendChild(copy);
 		
@@ -2182,11 +3082,12 @@ function gfnShowSnackBar(action, message, type, time)
 				iconTag.classList.add('fa', 'fa-meh-o');
 			break;
 		}
-		textTag.textContent = message;
+		//textTag.textContent = message;
+		textTag.innerHTML = message;
 		copyRoot.classList.add(_action, "Activation");
 		
-		
-		if(type && (type === "M" || type === "m"))
+		type = type ? type : '';
+		if(type && (type === "m" || type === "manual" || type === "M" || type === "MANUAL"))
 		{
 			copyRoot.addEventListener('click', function(){
 				let _this = this;
@@ -2236,11 +3137,11 @@ function gfnReleaseSnackBar()
 			active[active.length-1].remove();
 			gfnReleaseSnackBar(); //재귀
 		}
-		else if(CONT_SNACK_BAR.clientHeight > window.innerHeight)
-		{
-			active[active.length-1].remove();
-			gfnReleaseSnackBar(); //재귀
-		}
+		//else if(CONT_SNACK_BAR.clientHeight > window.innerHeight)
+		//{
+		//	active[active.length-1].remove();
+		//	gfnReleaseSnackBar(); //재귀
+		//}
 		else
 		{
 			return;
@@ -2280,6 +3181,47 @@ function gfnExcelDownloadWithSheetJS(fileName, sheetList, dataObj)
 	}
 }
 
+
+function gfnTuiGridInfo()
+{
+	let info = {};
+	
+	if(typeof(TOAST_GRID) != 'undefined')
+	{
+		if(TOAST_GRID)
+		{
+			let tuiGridList = Object.keys(TOAST_GRID);
+			if(tuiGridList.length)
+			{
+				for(let i = 0; i < tuiGridList.length; i++)
+				{
+					// 개별 Grid 만큼 찾아서 처리
+					info[tuiGridList[i]] = {
+						 RowCount : TOAST_GRID[tuiGridList[i]].getRowCount()
+						,FocusedCell : TOAST_GRID[tuiGridList[i]].getFocusedCell()
+					}
+				}
+			}
+		}
+	}
+	return info
+}
+
+
+// 2023-09-18, Kim CheolEon : 순서 상관없는 배열 비교
+function gfnArrayEqualCheck(arr1, arr2)
+{
+	arr1.sort();
+	arr2.sort();
+	
+	return arr1.length === arr2.length && arr1.every((value, index) => value === arr2[index]);
+}
+
+//###############################################################################################################//
+//###############################################################################################################//
+//###############################################################################################################//
+//###############################################################################################################//
+//###############################################################################################################//
 
 /*
 [Apriso] – changed to "<drive>\Program Files\Dassault Systemes\DELMIA Apriso 2019\WebSite\Portal" in runtime
@@ -2456,8 +3398,11 @@ MM4100 ~ MM4106
 	justify-content: end;
 	width: 100%;
 	*/
+	/*
 	margin-left: auto;
+	*/
 	padding-bottom: 0.5em;
+	text-align: right;
 }
 
 .ToastUI-ButtonGroup .Button
@@ -2465,10 +3410,12 @@ MM4100 ~ MM4106
 	/* Apriso Grid Toolbox Button Style */
 	height: 2em;
     display: inline-block;
-    vertical-align: baseline;
-    margin: 0 0 0 0.5em;
+    vertical-align: middle;
+    margin: 0 0 0 0.2em;
     width: auto;
-    float: left;
+    /*float: left;*/
+	
+	font-weight: bold;
 }
 
 .ToastUI-GridGroup
@@ -2481,6 +3428,11 @@ MM4100 ~ MM4106
 .ToastUI-GridGroup .tuiGrid:not(.Active)
 {
 	display: none;
+}
+
+.ToastUI-SubGroup
+{
+	box-sizing: border-box;
 }
 
 /* *************************** ToastUI CSS :: E N D *************************** */
@@ -2700,6 +3652,19 @@ div.Bottom-Search-Layer
 	padding: 0 !important;
 }
 
+/*button.CustomModalButton.Primary { background-color: #368EC4 !important; }*/
+button.CustomModalButton.Secondary 
+{ 
+	color: #3D3D3D !important;
+	border-color: #B4B6BA !important;
+	background-color: #F1F1F1 !important;
+}	
+button.CustomModalButton.Secondary:hover
+{
+    color: #3D3D3D !important;
+    border-color: #77797C !important;
+    background-color: #E2E4E3 !important;
+}
 
 /* =============================================================================
 	SnackBar CSS
@@ -2806,4 +3771,79 @@ div.Bottom-Search-Layer
 @-o-keyframes SnackbarFadeout {
   from {opacity: 1;}
   to {opacity: 0;}
+}
+
+
+
+
+.cust-container {
+  display: block;
+  position: relative;
+  
+  /*
+  margin-bottom: -12px;
+  margin-left: 3px;
+  */
+  
+  cursor: pointer;
+  font-size: 22px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Hide the browser's default checkbox */
+.cust-container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+/* Create a custom checkbox */
+.cust-checkmark {
+  position: absolute;
+  top: -12px;
+  /*left: 5px;*/
+  margin-left: -12px;
+  height: 25px;
+  width: 25px;
+  background-color: #eee;
+}
+
+/* On mouse-over, add a grey background color */
+.cust-container:hover input ~ .cust-checkmark {
+  background-color: #ccc;
+}
+
+/* When the checkbox is checked, add a blue background */
+.cust-container input:checked ~ .cust-checkmark {
+  background-color: #2196F3;
+}
+
+/* Create the checkmark/indicator (hidden when not checked) */
+.cust-checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+/* Show the checkmark when checked */
+.cust-container input:checked ~ .cust-checkmark:after {
+  display: block;
+}
+
+/* Style the checkmark/indicator */
+.cust-container .cust-checkmark:after {
+  left: 9px;
+  top: 5px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  -webkit-transform: rotate(45deg);
+  -ms-transform: rotate(45deg);
+  transform: rotate(45deg);
 }
