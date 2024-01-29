@@ -1,0 +1,44 @@
+/* SQL Server의 COLLATION 확인 */
+select serverproperty('collation')
+
+/* Database 의 COLLATION 확인 */
+SELECT name, collation_name FROM sys.databases;
+
+/* COLLATION 종류 확인 */
+SELECT * FROM ::fn_helpcollations()
+
+
+Korean_Wansung_CI_AS
+
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+USE master
+GO
+/*****************  언어확인  *****************/ 
+select @@language ; 
+------------- 
+한국어
+
+/*****************  collation_name 확인  *****************/ 
+SELECT collation_name    
+FROM sys.databases   
+WHERE name = 'Apriso'  ;  
+-------------- 
+sql_latin1_general_cp1_ci_as
+
+/*****************  collation_name 변경 작업  *****************/ 
+/**  * 싱글유저 모드로 변경. 싱글유저로 접속하지 않으면 다른 사람의 작업으로 인해 배타적잠금 오류가 발생.  */ 
+ALTER DATABASE database_name SET SINGLE_USER WITH ROLLBACK IMMEDIATE 
+GO 
+
+/**  * collation_name 을 Korean_Wansung_CI_AS 으로 변경  */ 
+ALTER DATABASE database_name COLLATE Korean_Wansung_CI_AS 
+GO 
+
+/**  * 멀티유저 모드로 변경.   */ 
+ALTER DATABASE database_name SET MULTI_USER 
+GO
+
