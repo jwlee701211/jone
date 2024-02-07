@@ -41,4 +41,3 @@ GO
 /**  * 멀티유저 모드로 변경.   */ 
 ALTER DATABASE database_name SET MULTI_USER 
 GO
-
