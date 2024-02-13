@@ -1,0 +1,15 @@
+D1_CO_ST_DICTIONARY_CREATE_ACT
+D1_CO_ST_DICTIONARY_UPDATE_ACT
+
+EXT_DictionaryID
+EXT_DictionaryCode
+EXT_DictionaryDesc
+
+IF (ISNULL(@DictionaryCode, '') != '')
+BEGIN
+    UPDATE [LITERAL_DICTIONARY]
+	   SET [Description]   = @DictionaryDesc
+	     , [LastUpdateOn]  = @CreatedOn
+		   , [LastUpdatedBy] = @CreatedBy
+     WHERE [Code] = @DictionaryCode 
+END

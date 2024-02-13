@@ -41,6 +41,23 @@ TDHPAPO.OrderLine IN (SELECT [VALUE] FROM dbo.DI_FN_Split(@LINE, ','))
 dbo.CIM_F_Local_To_UTC(@VStartTime)
 dbo.CIM_F_UTC_To_Local(@VStartTime)
 
+
+DECLARE @iTextID     INT            = 147179
+      , @iLanguageID INT            = 1033
+      , @iType       NVARCHAR(20)   = 'MEDIUM'  -- SHORT / MEDIUM / EXTENDED
+      , @iDefalut    NVARCHAR(2000) = '' ;
+      
+SELECT dbo.D1_FN_CO_GetTextTrans(@iTextID, @iLanguageID, @iType, @iDefalut)
+
+DECLARE @iDictionaryCode NVARCHAR(100)  = 'D1_COL_DictionaryCode'
+      , @iLanguageID     INT            = 1042
+      , @iType           NVARCHAR(20)   = 'MEDIUM'  -- SHORT / MEDIUM / EXTENDED
+      , @iDefalut        NVARCHAR(2000) = '' ;
+      
+SELECT dbo.D1_FN_CO_GetDictionaryTrans(@iDictionaryCode, @iLanguageID, @iType, @iDefalut)
+
+
+
 gfnTuiNewGrid
 gfnToastGrid
 
@@ -54,6 +71,7 @@ dbo.DIOEM_FN_GetPartnerName(Facility, PartnerNo, @LanguageID)
 
 dbo.DIOEM_FN_GetDecimalFormat(@NumberValue, @NullCheckYn)
 dbo.DIOEM_FN_GetIntFormat(@NumberValue, @NullCheckYn)
+
 
 
 DECLARE @Facility                NVARCHAR(40) = '1000/A'                   
